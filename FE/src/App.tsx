@@ -36,6 +36,51 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
 
+  // --- Document Indexing States & Actions ---
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const fetchDocuments = async () => {
+    try {
+      const res = await fetch('/api/documents');
+      if (res.ok) {
+        const data = await res.json();
+        setDocuments(data);
+      }
+    } catch (e) {
+      console.error('Error fetching documents', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+    // Poll documents status every 5 seconds
+    const interval = setInterval(fetchDocuments, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleUploadFile = async (file: File) => {
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      if (res.ok) {
+        await fetchDocuments();
+      } else {
+        alert('Tải tài liệu lên thất bại!');
+      }
+    } catch (e) {
+      console.error('Error uploading document:', e);
+      alert('Lỗi kết nối khi tải tài liệu lên!');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // --- Initial Mount & State Loading ---
   useEffect(() => {
     // 1. Load config & API Key from localStorage
@@ -388,6 +433,10 @@ export default function App() {
         onSelectModel={handleSelectModel}
         isMobileOpen={isMobileSidebarOpen}
         onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+        documents={documents}
+        isUploading={isUploading}
+        onUploadFile={handleUploadFile}
+        onRefreshDocuments={fetchDocuments}
       />
 
       {/* Main Conversation Center Canvas */}

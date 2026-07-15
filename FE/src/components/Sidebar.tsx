@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { 
   Plus, MessageSquare, Trash2, Edit3, Settings, Check, X, 
-  Sparkles, ShieldCheck, Key, Bot, ChevronLeft, ChevronRight, Menu
+  Sparkles, ShieldCheck, Key, Bot, ChevronLeft, ChevronRight, Menu, Upload
 } from 'lucide-react';
 import { ChatSession, AVAILABLE_MODELS } from '../types';
 
@@ -24,6 +24,10 @@ interface SidebarProps {
   onSelectModel: (id: string) => void;
   isMobileOpen: boolean;
   onToggleMobile: () => void;
+  documents: any[];
+  isUploading: boolean;
+  onUploadFile: (file: File) => void;
+  onRefreshDocuments: () => void;
 }
 
 export default function Sidebar({
@@ -40,9 +44,19 @@ export default function Sidebar({
   onSelectModel,
   isMobileOpen,
   onToggleMobile,
+  documents,
+  isUploading,
+  onUploadFile,
+  onRefreshDocuments,
 }: SidebarProps) {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      onUploadFile(e.target.files[0]);
+    }
+  };
 
   const startRename = (session: ChatSession, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -233,6 +247,69 @@ export default function Sidebar({
               })}
             </div>
           )}
+        </div>
+
+        {/* RAG Documents Indexing Manager */}
+        <div className="border-t border-slate-200 bg-white p-4 space-y-3 shrink-0">
+          <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 tracking-wider font-mono">
+            <span>TÀI LIỆU GRAPH RAG</span>
+            <button 
+              onClick={onRefreshDocuments}
+              className="text-indigo-600 hover:text-indigo-700 font-semibold cursor-pointer hover:underline text-[9px] bg-transparent border-0 p-0"
+            >
+              Làm mới
+            </button>
+          </div>
+
+          <div className="relative">
+            <input
+              type="file"
+              accept=".txt,.md,.pdf"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="rag-file-upload"
+              disabled={isUploading}
+            />
+            <label
+              htmlFor="rag-file-upload"
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed rounded-xl text-xs font-medium cursor-pointer transition-all ${
+                isUploading 
+                  ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed' 
+                  : 'border-indigo-200 hover:border-indigo-400 bg-indigo-50/20 hover:bg-indigo-50/40 text-indigo-600'
+              }`}
+            >
+              <Upload className="w-3.5 h-3.5" />
+              {isUploading ? 'Đang tải lên...' : 'Tải tài liệu (.pdf, .txt, .md)'}
+            </label>
+          </div>
+
+          <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-1">
+            {documents.length === 0 ? (
+              <p className="text-[10px] text-slate-400 text-center py-2 font-medium">Chưa có tài liệu nào</p>
+            ) : (
+              documents.map((doc) => (
+                <div key={doc.id} className="flex flex-col p-2 bg-slate-50 border border-slate-100 rounded-lg text-[10px] space-y-0.5 shadow-sm">
+                  <div className="flex items-center justify-between font-medium">
+                    <span className="truncate max-w-[140px] text-slate-700 font-semibold" title={doc.filename}>{doc.filename}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold tracking-wider font-mono ${
+                      doc.status === 'indexed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                      doc.status === 'processing' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100 animate-pulse' :
+                      doc.status === 'failed' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                      'bg-slate-100 text-slate-600 border border-slate-200'
+                    }`}>
+                      {doc.status.toUpperCase()}
+                    </span>
+                  </div>
+                  {(doc.entity_count > 0 || doc.relationship_count > 0) && (
+                    <div className="text-[9px] text-slate-400 font-mono flex gap-2">
+                      <span>Nút: {doc.entity_count}</span>
+                      <span>Cạnh: {doc.relationship_count}</span>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Sidebar Footer Info & Trigger Settings */}

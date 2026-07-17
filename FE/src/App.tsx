@@ -203,10 +203,21 @@ export default function App() {
 
     let currentSession = sessions.find((s) => s.id === activeSessionId);
     let sessionToUse: ChatSession;
+    let sessionsListToMap = sessions;
 
     // 1. Create a session on the fly if none is active or exists
     if (!currentSession) {
-      sessionToUse = handleNewSession(selectedModelId);
+      sessionToUse = {
+        id: crypto.randomUUID(),
+        title: 'Hội thoại mới',
+        messages: [],
+        model: selectedModelId,
+        systemInstruction: config.systemInstruction,
+        temperature: config.temperature,
+        createdAt: Date.now(),
+      };
+      sessionsListToMap = [sessionToUse, ...sessions];
+      setActiveSessionId(sessionToUse.id);
     } else {
       sessionToUse = currentSession;
     }
@@ -241,7 +252,7 @@ export default function App() {
       modelUsed: AVAILABLE_MODELS.find(m => m.id === sessionToUse.model)?.name || sessionToUse.model,
     };
 
-    const initialSessionsState = sessions.map((s) => {
+    const initialSessionsState = sessionsListToMap.map((s) => {
       if (s.id === sessionToUse.id) {
         return {
           ...s,
@@ -326,39 +337,43 @@ export default function App() {
               if (dataStr === '[DONE]') {
                 break;
               }
+              let parsed: any = null;
               try {
-                const parsed = JSON.parse(dataStr);
-                if (parsed.error) {
-                  throw new Error(parsed.error);
-                }
-                if (parsed.text) {
-                  accumulatedText += parsed.text;
-
-                  // Update session's assistant message and user message status (to 'delivered')
-                  setSessions((prevSessions) => {
-                    const next = prevSessions.map((s) => {
-                      if (s.id === sessionToUse.id) {
-                        return {
-                          ...s,
-                          messages: s.messages.map((m) => {
-                            if (m.id === assistantMessageId) {
-                              return { ...m, content: accumulatedText };
-                            }
-                            if (m.id === userMessage.id && m.status !== 'delivered' && m.status !== 'read') {
-                              return { ...m, status: 'delivered' as const };
-                            }
-                            return m;
-                          }),
-                        };
-                      }
-                      return s;
-                    });
-                    localStorage.setItem('gemini_chat_sessions', JSON.stringify(next));
-                    return next;
-                  });
-                }
+                parsed = JSON.parse(dataStr);
               } catch (e: any) {
                 // Ignore parsing incomplete JSON lines
+                continue;
+              }
+
+              if (parsed.error) {
+                throw new Error(parsed.error);
+              }
+
+              if (parsed.text) {
+                accumulatedText += parsed.text;
+
+                // Update session's assistant message and user message status (to 'delivered')
+                setSessions((prevSessions) => {
+                  const next = prevSessions.map((s) => {
+                    if (s.id === sessionToUse.id) {
+                      return {
+                        ...s,
+                        messages: s.messages.map((m) => {
+                          if (m.id === assistantMessageId) {
+                            return { ...m, content: accumulatedText };
+                          }
+                          if (m.id === userMessage.id && m.status !== 'delivered' && m.status !== 'read') {
+                            return { ...m, status: 'delivered' as const };
+                          }
+                          return m;
+                        }),
+                      };
+                    }
+                    return s;
+                  });
+                  localStorage.setItem('gemini_chat_sessions', JSON.stringify(next));
+                  return next;
+                });
               }
             }
           }

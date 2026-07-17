@@ -7,6 +7,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import "dotenv/config";
 
 async function startServer() {
   const app = express();
@@ -16,10 +17,20 @@ async function startServer() {
   app.use(express.json());
 
   // 1. API: Check configuration status
-  app.get("/api/config", (req, res) => {
-    res.json({
-      hasSystemKey: !!process.env.GEMINI_API_KEY,
-    });
+  app.get("/api/config", async (req, res) => {
+    if (process.env.GEMINI_API_KEY) {
+      return res.json({
+        hasSystemKey: true,
+      });
+    }
+    // Forward to backend config
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/config");
+      const data = await response.json();
+      res.json(data);
+    } catch (e) {
+      res.json({ hasSystemKey: false });
+    }
   });
 
   // 2. API: Verify custom or system API key
@@ -29,10 +40,18 @@ async function startServer() {
       const keyToUse = apiKey || process.env.GEMINI_API_KEY;
 
       if (!keyToUse) {
-        return res.status(400).json({ 
-          valid: false, 
-          message: "API Key is missing. Please configure one." 
-        });
+        // Forward to backend
+        try {
+          const response = await fetch("http://127.0.0.1:8000/api/verify-key", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(req.body),
+          });
+          const data = await response.json();
+          return res.json(data);
+        } catch (e: any) {
+          return res.status(400).json({ valid: false, message: `Backend connection error: ${e.message}` });
+        }
       }
 
       // Initialize client and run a minimal test query
@@ -69,21 +88,49 @@ async function startServer() {
 
   // 3. API: Stream Chat Response (SSE)
   app.post("/api/chat/stream", async (req, res) => {
-    // Set headers for Server-Sent Events
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-
     try {
       const { messages, model, config, apiKey } = req.body;
       const keyToUse = apiKey || process.env.GEMINI_API_KEY;
 
       if (!keyToUse) {
-        res.write(`data: ${JSON.stringify({ error: "Missing API Key. Please provide one." })}\n\n`);
-        return res.end();
+        // Forward to Python backend
+        try {
+          const response = await fetch("http://127.0.0.1:8000/api/chat/stream", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(req.body),
+          });
+
+          res.setHeader("Content-Type", "text/event-stream");
+          res.setHeader("Cache-Control", "no-cache");
+          res.setHeader("Connection", "keep-alive");
+
+          if (!response.body) {
+            res.write(`data: ${JSON.stringify({ error: "No response body from backend." })}\n\n`);
+            return res.end();
+          }
+
+          const reader = response.body.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(value);
+          }
+          return res.end();
+        } catch (error: any) {
+          console.error("Backend proxy error:", error);
+          res.setHeader("Content-Type", "text/event-stream");
+          res.write(`data: ${JSON.stringify({ error: `Backend connection error: ${error.message}` })}\n\n`);
+          return res.end();
+        }
       }
 
       if (!messages || !Array.isArray(messages) || messages.length === 0) {
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
         res.write(`data: ${JSON.stringify({ error: "No messages provided." })}\n\n`);
         return res.end();
       }

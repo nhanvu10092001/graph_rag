@@ -13,3 +13,5 @@ boto3>=1.30.0
 psycopg2-binary>=2.9.0
 pypdfium2>=5.0.0
 python-multipart>=0.0.18
+alembic>=1.13.0
+pytesseract>=0.3.13

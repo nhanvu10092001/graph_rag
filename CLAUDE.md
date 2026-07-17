@@ -46,7 +46,20 @@ The project follows a decoupling strategy, separating core utilities, LLM integr
 ## Directory Structure
 ```
 graph_rag/
-├── RAG_package/
+├── BE/                            # Backend FastAPI Application
+│   ├── app/                       # Application source package
+│   │   ├── services/              # Business logic & storage services
+│   │   ├── routers/               # FastAPI routers (chat, config, documents)
+│   │   ├── database.py            # SQLAlchemy session setup
+│   │   ├── models.py              # Database models (e.g. Document)
+│   │   ├── parser.py              # File parsing & text extraction
+│   │   └── agent.py               # LangGraph agent & tool calling config
+│   ├── alembic/                   # Database schema migrations
+│   ├── alembic.ini                # Alembic settings
+│   ├── main.py                    # Root bootstrapper script
+│   └── requirements.txt           # Backend python dependencies
+├── FE/                            # Frontend Web Application (React + Vite)
+├── RAG_package/                   # Monorepo packages container
 │   ├── Makefile                   # Developer shortcuts for demos and setup
 │   ├── pyproject.toml             # UV workspace and dependencies configuration
 │   ├── setup.py                   # Legacy setup script
@@ -63,6 +76,7 @@ graph_rag/
 ├── .agents/                       # Agent rule sets & customizations
 └── README.md                      # General repository introduction
 ```
+
 
 ---
 
@@ -143,6 +157,30 @@ make langchain-mcp-demo
 # Convert an active MCP server's tools to an OpenAPI server (port 8001)
 make cvt-fastmcp-2-openapi
 ```
+
+### 4. Main Application (FE & BE)
+- **Start Database & Storage Services (Docker)**:
+  ```bash
+  docker start graph_rag_postgres graph_rag_neo4j graph_rag_minio
+  ```
+- **Start Backend API (FastAPI - Port 8000)**:
+  ```bash
+  cd BE
+  uv run alembic upgrade head
+  uv run python main.py
+  ```
+- **Start Frontend UI (Express/Vite - Port 3000)**:
+  ```bash
+  cd FE
+  # Copy .env.example to .env and configure GEMINI_API_KEY if needed
+  cp .env.example .env
+  npm run dev
+  ```
+- **Run Chat/Security Verification Tests (Playwright)**:
+  ```bash
+  cd FE
+  node verify_chat.cjs
+  ```
 
 ---
 

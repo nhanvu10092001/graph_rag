@@ -24,8 +24,9 @@ postgres:
   host: "localhost"
   port: 5432
   user: "postgres"
-  password: "password"
+  password: "postgres"
   database: "graph_rag_db"
+
 
 minio:
   endpoint: "localhost:9000"

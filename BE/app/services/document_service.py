@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 
 from app.database import SessionLocal
 from app.models import Document
-from app.services.file_storage import get_file_from_minio
+from app.services.file_storage import get_file_from_minio, delete_file_from_minio
 from app.parser import extract_text
 from app.agent import graph_indexing_service
 
@@ -85,7 +85,7 @@ async def index_document_background(doc_id: int, minio_key: str, filename: str):
         # 4. Ingest text into Graph RAG
         logger.info(f"Indexing document {doc_id} ('{filename}') via GraphIndexingService...")
         loop = asyncio.get_running_loop()
-        res = await loop.run_in_executor(None, graph_indexing_service.index_text, text)
+        res = await loop.run_in_executor(None, lambda: graph_indexing_service.index_text(text, source_doc=filename))
         
         # 5. Extract statistics
         entity_count = res.get("indexed_entities", 0)
@@ -101,3 +101,37 @@ async def index_document_background(doc_id: int, minio_key: str, filename: str):
     except Exception as e:
         logger.error(f"Failed to index document {doc_id} ('{filename}'): {e}")
         update_document_status(doc_id, "failed")
+
+
+def delete_document(doc_id: int) -> Dict[str, Any]:
+    """Deletes document record from Postgres, file object from MinIO, and data from Graph store."""
+    db = SessionLocal()
+    try:
+        doc = db.query(Document).filter(Document.id == doc_id).first()
+        if not doc:
+            raise ValueError(f"Document with ID {doc_id} not found.")
+        
+        # 1. Delete from Neo4j Graph
+        try:
+            graph_indexing_service.delete_document_from_graph(doc.filename)
+        except Exception as e:
+            logger.warning(f"Failed to delete document from graph for doc {doc_id}: {e}")
+            
+        # 2. Delete from MinIO
+        try:
+            delete_file_from_minio(doc.minio_key)
+        except Exception as e:
+            logger.warning(f"Failed to delete file from MinIO for doc {doc_id}: {e}")
+        
+        # 2. Delete from Postgres
+        db.delete(doc)
+        db.commit()
+        
+        logger.info(f"Document {doc_id} ('{doc.filename}') deleted successfully.")
+        return {
+            "status": "success",
+            "message": f"Document {doc_id} deleted successfully."
+        }
+    finally:
+        db.close()
+

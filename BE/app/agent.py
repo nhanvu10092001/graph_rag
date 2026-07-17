@@ -10,56 +10,86 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# 1. Initialize LLM dynamically with Tool Calling support
-if settings.llm_provider == "ollama":
-    try:
-        from langchain_ollama import ChatOllama
-        logger.info("Using ChatOllama from langchain_ollama")
-        llm = ChatOllama(
-            model=settings.llm_model,
-            base_url=settings.llm_base_url,
-            temperature=settings.llm_temperature
-        )
-    except ImportError:
-        from langchain_community.chat_models import ChatOllama
-        logger.info("Using ChatOllama from langchain_community")
-        llm = ChatOllama(
-            model=settings.llm_model,
-            base_url=settings.llm_base_url,
-            temperature=settings.llm_temperature
-        )
-elif settings.llm_provider == "openai":
-    from langchain_openai import ChatOpenAI
-    logger.info("Using ChatOpenAI from langchain_openai")
-    llm = ChatOpenAI(
-        model=settings.llm_model,
-        temperature=settings.llm_temperature,
-        openai_api_key=settings.openai_api_key or None
-    )
-else:
-    raise ValueError(f"Unsupported LLM provider: {settings.llm_provider}")
+import os
+import yaml
+from pathlib import Path
 
-
-# 2. Construct plugin configuration dict from YAML settings
-plugin_config = {
-    "neo4j": {
-        "uri": settings.neo4j_uri,
-        "username": settings.neo4j_username,
-        "password": settings.neo4j_password,
-        "database": settings.neo4j_database,
-    },
-    "llm": {},  # Loaded separately above
-    "embeddings": {
-        "provider": settings.embeddings_provider,
-        "ollama": {
-            "model": settings.embeddings_model,
-            "base_url": settings.embeddings_base_url
-        } if settings.embeddings_provider == "ollama" else {},
-        "openai": {
-            "model": settings.embeddings_model,
-            "openai_api_key": settings.openai_api_key or None
-        } if settings.embeddings_provider == "openai" else {}
+# Load Graph RAG Config from graph_rag_config.yaml
+def load_graph_rag_config() -> dict:
+    config_path = Path(__file__).parent.parent / "graph_rag_config.yaml"
+    config_dict = {}
+    if config_path.exists():
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config_dict = yaml.safe_load(f) or {}
+        except Exception as e:
+            logger.warning(f"Failed to load graph_rag_config.yaml ({e}). Using settings/env fallbacks.")
+            
+    # Resolve neo4j config
+    neo4j_dict = config_dict.get("neo4j", {})
+    neo4j_config = {
+        "uri": os.getenv("NEO4J_URI") or neo4j_dict.get("uri") or settings.neo4j_uri,
+        "username": os.getenv("NEO4J_USERNAME") or neo4j_dict.get("username") or settings.neo4j_username,
+        "password": os.getenv("NEO4J_PASSWORD") or neo4j_dict.get("password") or settings.neo4j_password,
+        "database": os.getenv("NEO4J_DATABASE") or neo4j_dict.get("database") or settings.neo4j_database,
     }
+    
+    # Resolve llm config
+    llm_dict = config_dict.get("llm", {})
+    llm_model = os.getenv("LLM_MODEL") or llm_dict.get("openai", {}).get("model") or "gpt-4o-mini"
+    llm_temp = float(os.getenv("LLM_TEMPERATURE") or llm_dict.get("openai", {}).get("temperature") or 0.7)
+    
+    # Resolve embeddings config
+    emb_dict = config_dict.get("embeddings", {})
+    emb_model = os.getenv("EMBEDDINGS_MODEL") or emb_dict.get("openai", {}).get("model") or "text-embedding-3-small"
+    
+    openai_key = os.getenv("OPENAI_API_KEY") or settings.openai_api_key
+    
+    llm_openai_base = os.getenv("LLM_OPENAI_API_BASE") or os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL") or llm_dict.get("openai", {}).get("base_url") or settings.openai_api_base
+    emb_openai_base = os.getenv("EMBEDDINGS_OPENAI_API_BASE") or os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL") or emb_dict.get("openai", {}).get("base_url") or settings.openai_api_base
+    
+    return {
+        "neo4j": neo4j_config,
+        "llm": {
+            "provider": "openai",
+            "model": llm_model,
+            "temperature": llm_temp,
+            "openai_api_key": openai_key or None,
+            "openai_api_base": llm_openai_base or None
+        },
+        "embeddings": {
+            "provider": "openai",
+            "openai": {
+                "model": emb_model,
+                "openai_api_key": openai_key or None,
+                "openai_api_base": emb_openai_base or None
+            }
+        }
+    }
+
+graph_rag_cfg = load_graph_rag_config()
+
+# 1. Initialize OpenAI LLM
+llm_model = graph_rag_cfg["llm"]["model"]
+llm_temp = graph_rag_cfg["llm"]["temperature"]
+openai_key = graph_rag_cfg["llm"]["openai_api_key"]
+openai_base = graph_rag_cfg["llm"]["openai_api_base"]
+
+from langchain_openai import ChatOpenAI
+logger.info(f"Using ChatOpenAI: {llm_model} (Base URL: {openai_base})")
+llm = ChatOpenAI(
+    model=llm_model,
+    temperature=llm_temp,
+    openai_api_key=openai_key or None,
+    openai_api_base=openai_base or None
+)
+
+
+# 2. Construct plugin configuration dict
+plugin_config = {
+    "neo4j": graph_rag_cfg["neo4j"],
+    "llm": {},  # Loaded separately above
+    "embeddings": graph_rag_cfg["embeddings"]
 }
 
 # Initialize Graph RAG plugin
@@ -69,9 +99,14 @@ graph_rag_plugin = GraphRAGPlugin(plugin_config)
 # Instantiate query service and stores dynamically
 embeddings = EmbeddingsFactory.create_embeddings(plugin_config["embeddings"])
 query_service = graph_rag_plugin.graph_store
-# Re-create GraphQueryService using our embeddings and store
+
+# Build reranker from config
+from llm_utils_reranker import RerankerFactory
+reranker = RerankerFactory.create_reranker(graph_rag_cfg, llm=llm)
+
+# Re-create GraphQueryService using our embeddings, store, and reranker
 from llm_utils_graph_rag.services.query import GraphQueryService
-graph_query_service = GraphQueryService(graph_rag_plugin.graph_store, embeddings)
+graph_query_service = GraphQueryService(graph_rag_plugin.graph_store, embeddings, reranker=reranker)
 
 # Create GraphIndexingService for indexation
 from llm_utils_graph_rag.services.indexing import GraphIndexingService

@@ -7,7 +7,8 @@ from app.services.file_storage import upload_file_to_minio
 from app.services.document_service import (
     save_document_metadata,
     list_documents,
-    index_document_background
+    index_document_background,
+    delete_document
 )
 
 logger = logging.getLogger("BE.routers.document_router")
@@ -60,3 +61,25 @@ async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = 
             "status": "error",
             "message": f"Failed to upload document: {str(e)}"
         }
+
+
+@router.delete("/api/documents/{doc_id}")
+async def delete_uploaded_document(doc_id: int):
+    """Deletes document from Postgres and MinIO."""
+    logger.info(f"Received request to delete document: {doc_id}")
+    try:
+        res = delete_document(doc_id)
+        return res
+    except ValueError as ve:
+        logger.warning(f"Document delete request error: {ve}")
+        return {
+            "status": "error",
+            "message": str(ve)
+        }
+    except Exception as e:
+        logger.error(f"Failed to delete document {doc_id}: {e}")
+        return {
+            "status": "error",
+            "message": f"Failed to delete document: {str(e)}"
+        }
+

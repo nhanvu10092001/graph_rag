@@ -27,17 +27,16 @@ class Settings:
 
         # LLM Config
         llm_dict = config_dict.get("llm", {})
-        self.llm_provider = os.getenv("LLM_PROVIDER") or llm_dict.get("provider") or "ollama"
-        self.llm_model = os.getenv("LLM_MODEL") or llm_dict.get("model") or "llama3:8b"
-        self.llm_base_url = os.getenv("LLM_BASE_URL") or llm_dict.get("base_url") or "http://localhost:11434"
-        self.llm_temperature = float(os.getenv("LLM_TEMPERATURE") or llm_dict.get("temperature") or 0.0)
+        self.llm_provider = "openai"
+        self.llm_model = os.getenv("LLM_MODEL") or llm_dict.get("model") or "gpt-4o-mini"
+        self.llm_temperature = float(os.getenv("LLM_TEMPERATURE") or llm_dict.get("temperature") or 0.7)
         self.openai_api_key = os.getenv("OPENAI_API_KEY") or llm_dict.get("api_key") or ""
+        self.openai_api_base = os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL") or llm_dict.get("base_url") or None
 
         # Embeddings Config
         emb_dict = config_dict.get("embeddings", {})
-        self.embeddings_provider = os.getenv("EMBEDDINGS_PROVIDER") or emb_dict.get("provider") or "ollama"
-        self.embeddings_model = os.getenv("EMBEDDINGS_MODEL") or emb_dict.get("model") or "nomic-embed-text"
-        self.embeddings_base_url = os.getenv("EMBEDDINGS_BASE_URL") or emb_dict.get("base_url") or "http://localhost:11434"
+        self.embeddings_provider = "openai"
+        self.embeddings_model = os.getenv("EMBEDDINGS_MODEL") or emb_dict.get("model") or "text-embedding-3-small"
 
         # Server Config
         server_dict = config_dict.get("server", {})
@@ -68,10 +67,8 @@ class Settings:
             raise ValueError("Neo4j username is required")
         if not self.neo4j_password:
             raise ValueError("Neo4j password is required")
-        if self.llm_provider not in ["ollama", "openai"]:
-            raise ValueError("LLM provider must be either 'ollama' or 'openai'")
-        if self.embeddings_provider not in ["ollama", "openai"]:
-            raise ValueError("Embeddings provider must be either 'ollama' or 'openai'")
+        if not self.openai_api_key and not os.getenv("OPENAI_API_KEY"):
+            raise ValueError("OPENAI_API_KEY is required")
 
 
 def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> Settings:

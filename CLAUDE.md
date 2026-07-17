@@ -1,8 +1,7 @@
 # CLAUDE.md
 
 ## Project Overview
-**HLG LLM Utils** is a modular LLM framework with a plugin-based architecture for building AI applications. It is structured as a Python monorepo using **uv workspaces**, containing 7 core packages and an additional agent tool library.
-
+**HLG LLM Utils** is a modular LLM framework with a plugin-based architecture for building AI applications. It is structured as a Python monorepo using **uv workspaces**, containing 8 core packages and an additional agent tool library.
 ---
 
 ## Architecture Summary
@@ -30,7 +29,7 @@ The project follows a decoupling strategy, separating core utilities, LLM integr
 ```
 
 1. **`llm-utils-core`**: Defines the base plugin interface (`TaskPlugin`) and handles dynamic loading of plugins using Python entry points.
-2. **`llm-utils-llm`**: Factory implementations (`LLMFactory`, `EmbeddingsFactory`) for language models and embedding models, primarily supporting Ollama and OpenAI.
+2. **`llm-utils-llm`**: Factory implementations (`LLMFactory`, `EmbeddingsFactory`) for language models and embedding models, primarily supporting OpenAI.
 3. **`llm-utils-vector`**: Decoupled interface (`VectorStoreProvider`) and concrete implementations for vector search databases, specifically `Qdrant` and `PostgreSQL (pgvector)`.
 4. **`llm-utils-rag`**: End-to-end Retrieval-Augmented Generation capabilities. Contains specific services (`IndexingService`, `QueryService`, `DeletionService`) and complex retrieval features (BM25, hybrid retrieval, query transforms, reranking, and adaptive routing).
 5. **`llm-utils-graph-rag`**: Graph RAG capabilities built using **Neo4j** and **LangGraph**, enabling entity/relationship extraction, Cypher query generation with auto-correction, and hybrid search.
@@ -66,12 +65,13 @@ graph_rag/
 │   ├── uv.lock                    # Dependency lockfile
 │   └── packages/                  # Workspace package members
 │       ├── llm-utils-core/        # Plugin contracts and plugin loader
-│       ├── llm-utils-llm/         # LLM/Embeddings factory (Ollama, OpenAI)
+│       ├── llm-utils-llm/         # LLM/Embeddings factory (OpenAI)
 │       ├── llm-utils-vector/      # Qdrant and PGVector providers
 │       ├── llm-utils-rag/         # Query/Indexing services, hybrid search, RAG plugin
 │       ├── llm-utils-graph-rag/   # Graph RAG using Neo4j and LangGraph
 │       ├── llm-utils-subagent/    # Stateless subagent wrapper (simple, react, graph)
 │       ├── llm-utils-mcp/         # MCP server, adapters, and exporters
+│       ├── llm-utils-parser/      # Document parser and text extraction package
 │       └── agent_tool_packages/   # General-purpose agent tool library (standalone)
 ├── .agents/                       # Agent rule sets & customizations
 └── README.md                      # General repository introduction
@@ -83,7 +83,7 @@ graph_rag/
 ## Technology Stack
 - **Language**: Python >= 3.9 (workspace set up for Python 3.9, tool package requires Python >= 3.10)
 - **Monorepo Manager**: [uv](https://docs.astral.sh/uv/) Workspaces
-- **AI Framework**: LangChain (Core, Ollama, OpenAI adapters, adapters for MCP)
+- **AI Framework**: LangChain (Core, OpenAI adapters, adapters for MCP)
 - **State Machine**: LangGraph (used for ReAct agents, custom graph subagents, and Cypher self-correction)
 - **Databases**: Qdrant (Vector Store), PostgreSQL with `pgvector`, Neo4j (Graph Store)
 - **Web API**: FastAPI, Uvicorn, MCPO (OpenAPI generator for MCP)
@@ -101,15 +101,6 @@ make setup-all
 ```
 
 ### 2. Provider Prerequisites
-- **Ollama**:
-  ```bash
-  # Start Ollama service
-  ollama serve
-  
-  # Pull required models
-  ollama pull llama3:8b
-  ollama pull nomic-embed-text
-  ```
 - **OpenAI**: Save API key in a `.env` file at the `RAG_package/` root:
   ```env
   OPENAI_API_KEY=sk-your-openai-api-key

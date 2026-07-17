@@ -5,16 +5,15 @@ neo4j:
   database: "neo4j"
 
 llm:
-  provider: "openai"  # Options: "ollama", "openai"
-  model: "gpt-4o-mini"   # e.g., "llama3:8b", "gpt-4o"
-  base_url: "http://localhost:11434"
+  provider: "openai"
+  model: "gpt-4o-mini"
   temperature: 0.7
+  base_url: ""          # Custom API base URL (e.g. proxy, local router), leave empty for default
   api_key: ""          # Leave empty to read from OPENAI_API_KEY env var
 
 embeddings:
-  provider: "openai"  # Options: "ollama", "openai"
+  provider: "openai"
   model: "text-embedding-3-small"
-  base_url: "http://localhost:11434"
 
 server:
   host: "0.0.0.0"

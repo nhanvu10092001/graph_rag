@@ -110,7 +110,7 @@ export default function SettingsModal({
           <div className="space-y-3 pb-6 border-b border-slate-200">
             <div className="flex items-center gap-2 text-slate-800 font-semibold">
               <Key className="w-4 h-4 text-indigo-600" />
-              <h3>Quản Lý Gemini API Key</h3>
+              <h3>Quản Lý OpenAI API Key</h3>
             </div>
             
             <p className="text-xs text-slate-500 leading-relaxed">
@@ -122,7 +122,7 @@ export default function SettingsModal({
               <div className="flex gap-2">
                 <input
                   type="password"
-                  placeholder={hasSystemKey ? "Đã bật API Key Hệ Thống (Bỏ trống để sử dụng)" : "Nhập API Key Gemini của bạn..."}
+                  placeholder={hasSystemKey ? "Đã bật API Key Hệ Thống (Bỏ trống để sử dụng)" : "Nhập API Key OpenAI của bạn..."}
                   value={localApiKey}
                   onChange={(e) => setLocalApiKey(e.target.value)}
                   className="flex-1 bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none transition font-mono"

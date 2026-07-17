@@ -55,3 +55,14 @@ def get_file_from_minio(minio_key: str) -> bytes:
     """Retrieves file content from MinIO."""
     response = s3_client.get_object(Bucket=settings.minio_bucket, Key=minio_key)
     return response["Body"].read()
+
+
+def delete_file_from_minio(minio_key: str) -> None:
+    """Deletes a file from MinIO."""
+    try:
+        s3_client.delete_object(Bucket=settings.minio_bucket, Key=minio_key)
+        logger.info(f"Deleted '{minio_key}' from MinIO.")
+    except Exception as e:
+        logger.error(f"Failed to delete '{minio_key}' from MinIO: {e}")
+        raise e
+

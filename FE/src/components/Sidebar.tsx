@@ -27,6 +27,7 @@ interface SidebarProps {
   documents: any[];
   isUploading: boolean;
   onUploadFile: (file: File) => void;
+  onDeleteDocument: (id: number) => void;
   onRefreshDocuments: () => void;
 }
 
@@ -47,10 +48,12 @@ export default function Sidebar({
   documents,
   isUploading,
   onUploadFile,
+  onDeleteDocument,
   onRefreshDocuments,
 }: SidebarProps) {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [deletingDocId, setDeletingDocId] = useState<number | null>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -102,7 +105,7 @@ export default function Sidebar({
               <Bot className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <h1 className="text-sm font-semibold text-slate-800 tracking-tight">Gemini Hub</h1>
+              <h1 className="text-sm font-semibold text-slate-800 tracking-tight">Graph RAG Hub</h1>
               <p className="text-[10px] text-slate-400 font-mono tracking-wider">ENTERPRISE CHAT</p>
             </div>
           </div>
@@ -143,7 +146,7 @@ export default function Sidebar({
                   }`}
                   title={model.description}
                 >
-                  {model.name.replace('Gemini ', '')}
+                  {model.name}
                 </button>
               ))}
             </div>
@@ -290,15 +293,58 @@ export default function Sidebar({
               documents.map((doc) => (
                 <div key={doc.id} className="flex flex-col p-2 bg-slate-50 border border-slate-100 rounded-lg text-[10px] space-y-0.5 shadow-sm">
                   <div className="flex items-center justify-between font-medium">
-                    <span className="truncate max-w-[140px] text-slate-700 font-semibold" title={doc.filename}>{doc.filename}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold tracking-wider font-mono ${
-                      doc.status === 'indexed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                      doc.status === 'processing' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100 animate-pulse' :
-                      doc.status === 'failed' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                      'bg-slate-100 text-slate-600 border border-slate-200'
-                    }`}>
-                      {doc.status.toUpperCase()}
-                    </span>
+                    <span className="truncate max-w-[110px] text-slate-700 font-semibold" title={doc.filename}>{doc.filename}</span>
+                    <div className="flex items-center gap-1">
+                      {deletingDocId === doc.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteDocument(doc.id);
+                              setDeletingDocId(null);
+                            }}
+                            className="bg-rose-500 hover:bg-rose-600 text-white px-1.5 py-0.5 rounded text-[8px] font-bold transition cursor-pointer"
+                            title="Xác nhận xóa"
+                          >
+                            Xóa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingDocId(null);
+                            }}
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-1.5 py-0.5 rounded text-[8px] font-bold transition cursor-pointer"
+                            title="Hủy"
+                          >
+                            Hủy
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold tracking-wider font-mono ${
+                            doc.status === 'indexed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                            doc.status === 'processing' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100 animate-pulse' :
+                            doc.status === 'failed' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                            'bg-slate-100 text-slate-600 border border-slate-200'
+                          }`}>
+                            {doc.status.toUpperCase()}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingDocId(doc.id);
+                            }}
+                            className="text-slate-400 hover:text-rose-600 p-0.5 rounded hover:bg-slate-200/50 transition cursor-pointer"
+                            title="Xoá tài liệu"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   {(doc.entity_count > 0 || doc.relationship_count > 0) && (
                     <div className="text-[9px] text-slate-400 font-mono flex gap-2">

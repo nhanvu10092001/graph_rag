@@ -1,6 +1,6 @@
 {
-  "name": "Gemini Chat Client",
-  "description": "Enterprise-grade chat application utilizing Gemini models with robust custom API key and model management, styled with professional Tailwind CSS.",
+  "name": "Graph RAG Chat Client",
+  "description": "Enterprise-grade chat application utilizing OpenAI models with robust custom API key and model management, styled with professional Tailwind CSS.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_OPENAI_API"]
 }

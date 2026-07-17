@@ -16,7 +16,7 @@ const DEFAULT_SYSTEM_INSTRUCTION =
   "và viết bằng tiếng Việt tự nhiên trừ khi người dùng yêu cầu ngôn ngữ khác.";
 
 const DEFAULT_CONFIG: ModelConfig = {
-  model: 'gemini-3.5-flash',
+  model: 'gpt-4o-mini',
   systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
   temperature: 0.7,
   topP: 0.95,
@@ -27,7 +27,7 @@ export default function App() {
   // --- States ---
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [selectedModelId, setSelectedModelId] = useState<string>('gemini-3.5-flash');
+  const [selectedModelId, setSelectedModelId] = useState<string>('gpt-4o-mini');
   const [config, setConfig] = useState<ModelConfig>(DEFAULT_CONFIG);
   const [customApiKey, setCustomApiKey] = useState<string>('');
   const [hasSystemKey, setHasSystemKey] = useState<boolean>(true);
@@ -84,10 +84,10 @@ export default function App() {
   // --- Initial Mount & State Loading ---
   useEffect(() => {
     // 1. Load config & API Key from localStorage
-    const savedApiKey = localStorage.getItem('gemini_chat_api_key') || '';
+    const savedApiKey = localStorage.getItem('openai_chat_api_key') || '';
     setCustomApiKey(savedApiKey);
 
-    const savedConfig = localStorage.getItem('gemini_chat_config');
+    const savedConfig = localStorage.getItem('openai_chat_config');
     if (savedConfig) {
       try {
         setConfig(JSON.parse(savedConfig));
@@ -96,7 +96,7 @@ export default function App() {
       }
     }
 
-    const savedSessions = localStorage.getItem('gemini_chat_sessions');
+    const savedSessions = localStorage.getItem('openai_chat_sessions');
     if (savedSessions) {
       try {
         const parsed = JSON.parse(savedSessions);
@@ -127,17 +127,17 @@ export default function App() {
   // --- State Persistence ---
   const saveSessionsToLocal = (newSessions: ChatSession[]) => {
     setSessions(newSessions);
-    localStorage.setItem('gemini_chat_sessions', JSON.stringify(newSessions));
+    localStorage.setItem('openai_chat_sessions', JSON.stringify(newSessions));
   };
 
   const handleSaveConfig = (newConfig: ModelConfig) => {
     setConfig(newConfig);
-    localStorage.setItem('gemini_chat_config', JSON.stringify(newConfig));
+    localStorage.setItem('openai_chat_config', JSON.stringify(newConfig));
   };
 
   const handleSaveApiKey = (newKey: string) => {
     setCustomApiKey(newKey);
-    localStorage.setItem('gemini_chat_api_key', newKey);
+    localStorage.setItem('openai_chat_api_key', newKey);
   };
 
   // --- Chat Handlers ---
@@ -312,7 +312,7 @@ export default function App() {
           }
           return s;
         });
-        localStorage.setItem('gemini_chat_sessions', JSON.stringify(next));
+        localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
         return next;
       });
 
@@ -371,7 +371,7 @@ export default function App() {
                     }
                     return s;
                   });
-                  localStorage.setItem('gemini_chat_sessions', JSON.stringify(next));
+                  localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
                   return next;
                 });
               }
@@ -396,7 +396,7 @@ export default function App() {
           }
           return s;
         });
-        localStorage.setItem('gemini_chat_sessions', JSON.stringify(next));
+        localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
         return next;
       });
     } catch (error: any) {
@@ -412,7 +412,7 @@ export default function App() {
                 m.id === assistantMessageId 
                   ? { 
                       ...m, 
-                      content: error.message || 'Đã có lỗi xảy ra trong quá trình truyền dữ liệu từ Gemini API. Vui lòng kiểm tra lại cấu hình API Key.', 
+                      content: error.message || 'Đã có lỗi xảy ra trong quá trình truyền dữ liệu từ OpenAI API. Vui lòng kiểm tra lại cấu hình API Key.', 
                       error: true 
                     } 
                   : m
@@ -421,11 +421,27 @@ export default function App() {
           }
           return s;
         });
-        localStorage.setItem('gemini_chat_sessions', JSON.stringify(next));
+        localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
         return next;
       });
     } finally {
       setIsStreaming(false);
+    }
+  };
+
+  const handleDeleteDocument = async (id: number) => {
+    try {
+      const res = await fetch(`/api/documents/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        await fetchDocuments();
+      } else {
+        alert('Xoá tài liệu thất bại!');
+      }
+    } catch (e) {
+      console.error('Error deleting document:', e);
+      alert('Lỗi kết nối khi xoá tài liệu!');
     }
   };
 
@@ -451,6 +467,7 @@ export default function App() {
         documents={documents}
         isUploading={isUploading}
         onUploadFile={handleUploadFile}
+        onDeleteDocument={handleDeleteDocument}
         onRefreshDocuments={fetchDocuments}
       />
 

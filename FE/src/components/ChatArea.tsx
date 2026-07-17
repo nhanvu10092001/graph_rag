@@ -126,7 +126,7 @@ export default function ChatArea({
               </>
             ) : (
               <>
-                <h2 className="text-sm font-semibold text-slate-800">Gemini Hub</h2>
+                <h2 className="text-sm font-semibold text-slate-800">Graph RAG Hub</h2>
                 <p className="text-[10px] text-slate-400">Chưa tải cuộc trò chuyện</p>
               </>
             )}
@@ -164,7 +164,7 @@ export default function ChatArea({
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-800 mt-2">Xin chào! Tôi có thể giúp gì cho bạn?</h1>
               <p className="text-slate-500 text-sm max-w-md">
-                Hệ thống tích hợp mô hình ngôn ngữ lớn thế hệ mới nhất của Google Gemini với cấu trúc dữ liệu bảo mật và tối ưu hóa phản hồi.
+                Hệ thống tích hợp mô hình ngôn ngữ lớn thế hệ mới nhất của OpenAI kết hợp với cơ sở dữ liệu đồ thị Neo4j và LangGraph.
               </p>
             </div>
 
@@ -200,7 +200,7 @@ export default function ChatArea({
                 <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5 animate-bounce" />
                 <div className="space-y-1">
                   <h4 className="font-semibold text-amber-600">Không tìm thấy API Key máy chủ hoặc khóa cá nhân!</h4>
-                  <p className="leading-relaxed text-slate-500">Vui lòng nhấp vào nút dưới đây để nhập khóa API Gemini của bạn trước khi tiến hành gửi yêu cầu trò chuyện.</p>
+                  <p className="leading-relaxed text-slate-500">Vui lòng nhấp vào nút dưới đây để nhập khóa API OpenAI của bạn trước khi tiến hành gửi yêu cầu trò chuyện.</p>
                   <button 
                     onClick={onOpenSettings} 
                     className="mt-2 flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition text-[11px]"
@@ -233,7 +233,7 @@ export default function ChatArea({
                   {/* Bubble Container */}
                   <div className={`flex flex-col max-w-[85%] space-y-1 ${isUser ? 'items-end' : 'items-start'}`}>
                     <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
-                      <span>{isUser ? 'Bạn' : (message.modelUsed || 'Gemini Bot')}</span>
+                      <span>{isUser ? 'Bạn' : (message.modelUsed || 'RAG Assistant')}</span>
                       <span>•</span>
                       <span>{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       {isUser && (
@@ -371,7 +371,7 @@ export default function ChatArea({
 
           <div className="flex justify-between items-center mt-2 px-1 text-[10px] text-slate-400 leading-relaxed font-mono">
             <span>Nhấn Enter để gửi, Shift + Enter để thêm dòng mới.</span>
-            <span>Google Gemini SDK 2.4.0</span>
+            <span>OpenAI & LangGraph Agent</span>
           </div>
         </div>
       </footer>

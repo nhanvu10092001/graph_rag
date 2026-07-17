@@ -1,0 +1,32 @@
+# Neo4j Graph Database Configuration
+neo4j:
+  uri: "bolt://localhost:7687"
+  username: "neo4j"
+  password: "password"
+  database: "neo4j"
+
+# Language Model Configuration for Entity/Relationship extraction
+llm:
+  provider: "openai"
+  openai:
+    model: "gpt-4o-mini"
+    temperature: 0.7
+    base_url: "" # Custom API base URL (optional)
+
+# Embeddings Model Configuration for entity description vectors
+embeddings:
+  provider: "openai"
+  openai:
+    model: "text-embedding-3-small"
+    base_url: "" # Custom API base URL (optional)
+
+# Reranking Configuration
+reranking:
+  enabled: true
+  provider: "flashrank"
+  top_k: 5
+  flashrank:
+    model_name: "ms-marco-MiniLM-L-12-v2"
+  llm:
+    max_chars_per_doc: 1200
+

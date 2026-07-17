@@ -44,16 +44,16 @@ export interface ModelConfig {
 
 export const AVAILABLE_MODELS: ModelOption[] = [
   {
-    id: 'gemini-3.5-flash',
-    name: 'Gemini 3.5 Flash',
-    description: 'Bản phát hành mới nhất, phản hồi cực nhanh, tối ưu hóa cho hầu hết các tác vụ hội thoại và đa phương tiện.',
+    id: 'gpt-4o-mini',
+    name: 'GPT-4o Mini',
+    description: 'Mô hình nhanh, nhẹ, chi phí thấp, tối ưu hóa cho hầu hết các tác vụ hội thoại và phân tích văn bản.',
     category: 'flash',
     isPaid: false,
   },
   {
-    id: 'gemini-3.1-pro-preview',
-    name: 'Gemini 3.1 Pro (Preview)',
-    description: 'Mô hình tiên tiến nhất cho các tác vụ phức tạp, viết code, tư duy thuật toán và phân tích chuyên sâu.',
+    id: 'gpt-4o',
+    name: 'GPT-4o',
+    description: 'Mô hình tiên tiến nhất của OpenAI cho các tác vụ phức tạp, viết code, tư duy thuật toán và phân tích chuyên sâu.',
     category: 'pro',
     isPaid: true,
   }

@@ -1,41 +1,46 @@
-"""Document text extraction utility supporting .txt, .md, and .pdf files."""
+"""Document text extraction utility delegating to llm_utils_parser package with custom config."""
 
+import os
+import tempfile
 import logging
-from typing import Optional
+import yaml
+from pathlib import Path
+from llm_utils_parser import ExtractorRegistry
 
 logger = logging.getLogger("BE.parser")
 
 
-def extract_text_from_pdf(pdf_bytes: bytes) -> str:
-    """Extracts text content from PDF file bytes using pypdfium2."""
-    try:
-        import pypdfium2 as pdfium
-        pdf = pdfium.PdfDocument(pdf_bytes)
-        text = ""
-        for page in pdf:
-            textpage = page.get_textpage()
-            text += textpage.get_text_bounded() + "\n"
-        return text
-    except Exception as e:
-        logger.error(f"Error extracting text from PDF: {e}")
-        raise ValueError(f"Failed to parse PDF: {str(e)}")
+def load_rag_config() -> dict:
+    """Loads configuration from rag_config.yaml."""
+    config_path = Path(__file__).parent.parent / "rag_config.yaml"
+    if config_path.exists():
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                return yaml.safe_load(f) or {}
+        except Exception as e:
+            logger.warning(f"Failed to load rag_config.yaml ({e}). Using default configuration.")
+    return {}
 
 
 def extract_text(filename: str, file_bytes: bytes) -> str:
-    """Extracts plain text content from various file formats based on extension."""
-    ext = filename.lower().split(".")[-1]
+    """Extracts plain text content from various file formats based on extension using llm_utils_parser with rag_config.yaml config."""
+    logger.info(f"Extracting text from: {filename}")
+    suffix = os.path.splitext(filename)[1].lower()
     
-    if ext in ["txt", "md"]:
-        try:
-            return file_bytes.decode("utf-8")
-        except UnicodeDecodeError:
-            try:
-                return file_bytes.decode("latin-1")
-            except Exception as e:
-                raise ValueError(f"Failed to decode text file: {str(e)}")
-                
-    elif ext == "pdf":
-        return extract_text_from_pdf(file_bytes)
+    # Use NamedTemporaryFile to safely handle temp file creation
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:
+        tmp_file.write(file_bytes)
+        tmp_file_path = tmp_file.name
         
-    else:
-        raise ValueError(f"Unsupported file format: '.{ext}'. Supported formats: .txt, .md, .pdf")
+    try:
+        config = load_rag_config()
+        registry = ExtractorRegistry(config)
+        text, _ = registry.extract(Path(tmp_file_path))
+        return text
+    except Exception as e:
+        logger.error(f"Error extracting text from {filename}: {e}")
+        raise ValueError(f"Failed to parse {filename}: {str(e)}")
+    finally:
+        # Cleanup
+        if os.path.exists(tmp_file_path):
+            os.remove(tmp_file_path)

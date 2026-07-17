@@ -1,0 +1,279 @@
+# Extraction Configuration
+extraction:
+  # Text cleaning pipeline (applied after extraction, before chunking)
+  cleaning:
+    enabled: true
+    remove_null_bytes: true
+    normalize_unicode: true
+    collapse_whitespace: true
+    remove_page_markers: true
+    strip_headers_footers: false
+
+  # PDF-specific settings
+  pdf:
+    primary_loader: "pypdf"       # Options: "pypdf", "unstructured"
+    enable_ocr: false             # Enable OCR fallback for scanned PDFs
+    extract_tables: false         # Extract tables via pdfplumber (pip install pdfplumber)
+    min_text_threshold: 50        # Min chars before triggering OCR
+
+  # Encoding preference for text files
+  encoding:
+    preferred: ["utf-8", "utf-8-sig", "latin1", "cp1252"]
+    fallback_strategy: "ignore"   # Options: "ignore", "replace"
+
+  # OCR Configuration (used when pdf.enable_ocr=true)
+  ocr:
+    enabled: false
+    provider: "docling"           # Options: "docling", "paddle", "deepseek"
+
+    docling:                      # pip install docling
+      enable_table_extraction: true
+      enable_ocr: true
+      ocr_engine: "easyocr"      # Options: "easyocr", "tesseract"
+      max_pages: 100
+
+    paddle:                       # pip install paddlepaddle paddleocr
+      lang: "vi"                  # "vi", "en", "ch", "japan", "korean"
+      use_angle_cls: true
+      use_gpu: false
+
+    deepseek:                     # pip install openai pdf2image
+      model: "deepseek-chat"
+      api_key: ""
+      base_url: "https://api.deepseek.com"
+      max_tokens: 4096
+      max_pages: 20
+
+# Vector Database Configuration
+vector_store:
+  provider: "pgvector" # Options: "qdrant", "pgvector" - Default: pgvector
+  qdrant:
+    host: "localhost"
+    port: 6333
+    api_key: "your-qdrant-api-key"
+  pgvector:
+    host: "localhost"
+    port: 5432
+    user: "postgres"
+    password: "postgres"
+    database: "fusiai"
+llm:
+  provider: "ollama" # Options: "ollama", "openai" - Default: ollama
+  ollama:
+    model: "qwen3:4b" # Default model
+    base_url: "http://localhost:11434"
+    temperature: 0.7
+  openai:
+    model: "gpt-4o-mini"
+    temperature: 0.7
+    openai_api_key: "sk-proj-your-key-here"
+
+embeddings:
+  provider: "ollama" # Options: "ollama", "openai"
+  ollama:
+    model: "nomic-embed-text"
+    base_url: "http://localhost:11434"
+    indexing_batch_size: 10
+  openai:
+    model: "text-embedding-3-small"
+    openai_api_key: "${OPENAI_API_KEY}"  # Loaded from .env
+    indexing_batch_size: 10
+
+chunking:
+  provider: "hybrid"  # Options: "auto", "semantic", "standard", "contextual", "markdown", "code"
+
+  # Auto-routing settings (when provider="auto")
+  auto:
+    default_fallback: "semantic"  # fallback when file type not recognized
+    code_auto_detect_language: true
+
+  semantic:
+    buffer_size: 5
+    breakpoint_threshold_amount: 90
+    number_of_chunks: 50
+    embedding_batch_size: 10
+    enable_category_detection: true
+
+  standard:
+    chunk_size: 2000
+    chunk_overlap: 100
+
+  contextual:
+    chunk_size: 1000
+    chunk_overlap: 200
+
+  markdown:
+    chunk_size: 1000
+    chunk_overlap: 200
+    strip_headers: false
+
+  code:
+    chunk_size: 1500
+    chunk_overlap: 200
+    language: "python"
+    auto_detect_language: true
+
+  parent_child:
+    parent_chunk_size: 2000
+    parent_chunk_overlap: 200
+    child_chunk_size: 500
+    child_chunk_overlap: 50
+retriever:
+  provider: "vector_store_retriever"
+  vector_store_retriever:
+    # Number of documents to retrieve
+    search_type: "similarity" # Options: "similarity", "mmr", "similarity_score_threshold"
+    search_kwargs:
+      k: 1
+      score_threshold: 0.6
+      # Additional search parameters
+
+  # Hypothetical Document Embeddings (HyDE)
+  hypothetical:
+    search_type: "similarity" # Options: "similarity", "mmr", "similarity_score_threshold"
+    search_kwargs:
+      k: 5
+      score_threshold: 0.6
+
+  # Multi Query Retriever
+  multi_query_retriever:
+    search_type: "similarity" # Options: "similarity", "mmr", "similarity_score_threshold"
+    search_kwargs:
+      k: 2
+      score_threshold: 0.6
+
+  # Contextual Compression with LLMChainExtractor
+  ################################################## this retrieve is take many time
+  contextual_compression_retriever:
+    search_type: "similarity" # Options: "similarity", "mmr", "similarity_score_threshold"
+    search_kwargs:
+      k: 5
+      score_threshold: 0.6
+
+  # Contextual Compression with LLMChainFilter
+  contextual_compression_retriever_LLMChainFilter:
+    search_type: "similarity" # Options: "similarity", "mmr", "similarity_score_threshold"
+    search_kwargs:
+      k: 5
+      score_threshold: 0.6
+
+  # Contextual Compression with ReRanking
+  contextual_compression_retriever_ReRanking:
+    search_type: "similarity" # Options: "similarity", "mmr", "similarity_score_threshold"
+    search_kwargs:
+      k: 5
+      score_threshold: 0.6
+
+  # Google Search + Contextual Compression (requires GOOGLE_API_KEY and GOOGLE_CSE_ID)
+  contextual_compression_retriever_Google_Search:
+    # No additional params needed - handled internally
+    search_type: "similarity" # Options: "similarity", "mmr", "similarity_score_threshold"
+    search_kwargs:
+      k: 5
+      score_threshold: 0.6
+  # Ensemble Retriever
+  ensemble:
+    retriever_configs:
+      - provider: "vector_store_retriever"
+        vector_store_retriever:
+          search_type: "similarity" # Options: "similarity", "mmr", "similarity_score_threshold"
+          search_kwargs:
+            k: 5
+            score_threshold: 0.6
+      - provider: "hypothetical"
+        hypothetical:
+          search_type: "similarity" # Options: "similarity", "mmr", "similarity_score_threshold"
+          search_kwargs:
+            k: 5
+    weights: [0.7, 0.3] # Weights for each retriever
+
+  # Hybrid retriever (BM25 + Dense vector with RRF fusion)
+  hybrid:
+    dense_weight: 0.7        # Weight for dense vector retrieval
+    sparse_weight: 0.3       # Weight for BM25 keyword retrieval
+    bm25_k: 10               # Number of BM25 results to fetch
+    bm25_params:
+      k1: 1.5                # BM25 term frequency saturation
+      b: 0.75                # BM25 document length normalization
+    search_type: "similarity"
+    search_kwargs:
+      k: 5
+
+  self_query_retriever:
+    document_content_description: "Documents containing business reports, technical documentation, and research papers"
+    metadata_field_info:
+      - name: "filename"
+        description: "Document filename"
+        type: "string"
+    search_type: "similarity" # Options: "similarity", "mmr", "similarity_score_threshold"
+    search_kwargs:
+      k: 5
+
+  # BM25 keyword-only retriever (sparse, no dense vector)
+  bm25:
+    bm25_k: 10                # Number of docs to index for BM25
+    bm25_params:
+      k1: 1.5
+      b: 0.75
+    search_kwargs:
+      k: 5
+
+  # Adaptive retriever (self-correcting with document grading)
+  adaptive:
+    max_retries: 2            # Max query rewrite attempts
+    relevance_threshold: 0.5  # Min ratio of relevant docs
+    hallucination_check: false
+    search_type: "similarity"
+    search_kwargs:
+      k: 5
+
+  # Query Transform retriever (multi-angle query expansion)
+  query_transform:
+    strategies: ["step_back"]  # Options: "step_back", "decomposition", "expansion", "contextual"
+    max_sub_queries: 3
+    search_type: "similarity"
+    search_kwargs:
+      k: 5
+# Semantic RAG Configuration (for enhanced retrieval)
+retrieval:
+  use_semantic_chain: false # Enable semantic RAG chain
+  enable_category_prompts: false # Use category-specific prompts
+  enable_context_enhancement: false # Enhance context with metadata
+  category_weights: # Weights for different categories
+    technical: 1.2
+    business: 1.0
+    scientific: 1.1
+    legal: 1.3
+    medical: 1.1
+    educational: 1.0
+    general: 0.9
+
+# Reranking Configuration
+reranking:
+  enabled: true
+  provider: "flashrank"  # Options: "cross_encoder", "flashrank", "llm"
+  top_k: 5  # Number of documents to keep after reranking
+
+  flashrank:
+    model_name: "ms-marco-MiniLM-L-12-v2"
+    # model_name: "ms-marco-MultiBERT-L-12"  # multilingual alternative
+
+  cross_encoder:
+    model_name: "BAAI/bge-reranker-v2-m3"
+    # model_name: "cross-encoder/ms-marco-MiniLM-L-6-v2"  # lighter alternative
+
+  llm:
+    max_chars_per_doc: 1200
+
+# Query Transformation Pipeline
+query_transform:
+  enabled: true                    # Enable query transformations before retrieval
+  strategies: ["step_back"]         # Options: "step_back", "decomposition", "expansion", "contextual"
+  max_sub_queries: 3                # Max sub-queries for decomposition strategy
+
+# Adaptive RAG (Self-Correcting Retrieval)
+adaptive:
+  enabled: true                    # Enable adaptive retrieval with document grading
+  max_retries: 2                    # Max query rewrite attempts
+  relevance_threshold: 0.5          # Min ratio of relevant docs to proceed
+  hallucination_check: false        # Enable hallucination checking on generated answers

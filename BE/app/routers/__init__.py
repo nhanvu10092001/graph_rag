@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from app.routers.config_router import router as config_router
 from app.routers.chat_router import router as chat_router
 from app.routers.document_router import router as document_router
+from app.routers.group_router import router as group_router
 
 router = APIRouter()
 
@@ -11,3 +12,4 @@ router = APIRouter()
 router.include_router(config_router)
 router.include_router(chat_router)
 router.include_router(document_router)
+router.include_router(group_router)

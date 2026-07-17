@@ -29,6 +29,11 @@ interface SidebarProps {
   onUploadFile: (file: File) => void;
   onDeleteDocument: (id: number) => void;
   onRefreshDocuments: () => void;
+  groups: any[];
+  selectedGroupId: number | null;
+  onSelectGroup: (id: number | null) => void;
+  onCreateGroup: (name: string) => void;
+  onDeleteGroup: (id: number) => void;
 }
 
 export default function Sidebar({
@@ -50,10 +55,21 @@ export default function Sidebar({
   onUploadFile,
   onDeleteDocument,
   onRefreshDocuments,
+  groups,
+  selectedGroupId,
+  onSelectGroup,
+  onCreateGroup,
+  onDeleteGroup,
 }: SidebarProps) {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [deletingDocId, setDeletingDocId] = useState<number | null>(null);
+
+  // Custom modal states to replace native browser popups
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [isDeleteGroupOpen, setIsDeleteGroupOpen] = useState(false);
+  const [confirmDeletingDoc, setConfirmDeletingDoc] = useState<any | null>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -264,6 +280,45 @@ export default function Sidebar({
             </button>
           </div>
 
+          {/* Group Selector Dropdown */}
+          <div className="flex items-center gap-1.5">
+            <select
+              value={selectedGroupId || ''}
+              onChange={(e) => onSelectGroup(e.target.value ? parseInt(e.target.value) : null)}
+              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg text-xs px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium text-slate-700 cursor-pointer"
+            >
+              <option value="">Tất cả tài liệu</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => {
+                setNewGroupName('');
+                setIsCreateGroupOpen(true);
+              }}
+              className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg border-0 cursor-pointer transition flex items-center justify-center"
+              title="Tạo nhóm mới"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            {selectedGroupId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteGroupOpen(true);
+                }}
+                className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border-0 cursor-pointer transition flex items-center justify-center"
+                title="Xóa nhóm này"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           <div className="relative">
             <input
               type="file"
@@ -295,55 +350,25 @@ export default function Sidebar({
                   <div className="flex items-center justify-between font-medium">
                     <span className="truncate max-w-[110px] text-slate-700 font-semibold" title={doc.filename}>{doc.filename}</span>
                     <div className="flex items-center gap-1">
-                      {deletingDocId === doc.id ? (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteDocument(doc.id);
-                              setDeletingDocId(null);
-                            }}
-                            className="bg-rose-500 hover:bg-rose-600 text-white px-1.5 py-0.5 rounded text-[8px] font-bold transition cursor-pointer"
-                            title="Xác nhận xóa"
-                          >
-                            Xóa
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeletingDocId(null);
-                            }}
-                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-1.5 py-0.5 rounded text-[8px] font-bold transition cursor-pointer"
-                            title="Hủy"
-                          >
-                            Hủy
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold tracking-wider font-mono ${
-                            doc.status === 'indexed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                            doc.status === 'processing' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100 animate-pulse' :
-                            doc.status === 'failed' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                            'bg-slate-100 text-slate-600 border border-slate-200'
-                          }`}>
-                            {doc.status.toUpperCase()}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeletingDocId(doc.id);
-                            }}
-                            className="text-slate-400 hover:text-rose-600 p-0.5 rounded hover:bg-slate-200/50 transition cursor-pointer"
-                            title="Xoá tài liệu"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </>
-                      )}
+                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold tracking-wider font-mono ${
+                        doc.status === 'indexed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                        doc.status === 'processing' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100 animate-pulse' :
+                        doc.status === 'failed' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                        'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}>
+                        {doc.status.toUpperCase()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDeletingDoc(doc);
+                        }}
+                        className="text-slate-400 hover:text-rose-600 p-0.5 rounded hover:bg-slate-200/50 transition cursor-pointer flex items-center justify-center border-0 bg-transparent"
+                        title="Xoá tài liệu"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
                   {(doc.entity_count > 0 || doc.relationship_count > 0) && (
@@ -403,6 +428,147 @@ export default function Sidebar({
           </button>
         </div>
       </aside>
+
+      {/* 1. Modal: Tạo nhóm mới (Create Group) */}
+      {isCreateGroupOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 backdrop-blur-sm transition-opacity duration-200">
+          <div className="relative w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col p-6 animate-in fade-in zoom-in-95 duration-200 text-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900 tracking-wider uppercase font-mono">Tạo nhóm mới</h3>
+              <button 
+                type="button"
+                onClick={() => setIsCreateGroupOpen(false)}
+                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-lg transition border-0 cursor-pointer bg-transparent"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 tracking-wider font-mono">TÊN NHÓM TÀI LIỆU</label>
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                placeholder="Nhập tên nhóm..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl text-xs px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium text-slate-700"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newGroupName.trim()) {
+                    onCreateGroup(newGroupName.trim());
+                    setNewGroupName('');
+                    setIsCreateGroupOpen(false);
+                  }
+                }}
+              />
+            </div>
+            <div className="flex justify-end gap-2 text-xs pt-1">
+              <button
+                type="button"
+                onClick={() => setIsCreateGroupOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl border-0 cursor-pointer transition"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  console.log('Sidebar: Clicked Tạo button, input value:', newGroupName);
+                  if (newGroupName.trim()) {
+                    onCreateGroup(newGroupName.trim());
+                    setNewGroupName('');
+                    setIsCreateGroupOpen(false);
+                  }
+                }}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl border-0 cursor-pointer transition shadow-sm"
+              >
+                Tạo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Modal: Xác nhận xóa nhóm tài liệu (Delete Group) */}
+      {isDeleteGroupOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 backdrop-blur-sm transition-opacity duration-200">
+          <div className="relative w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col p-6 animate-in fade-in zoom-in-95 duration-200 text-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-rose-600 tracking-wider uppercase font-mono">Xóa nhóm tài liệu</h3>
+              <button 
+                type="button"
+                onClick={() => setIsDeleteGroupOpen(false)}
+                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-lg transition border-0 cursor-pointer bg-transparent"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              Bạn có chắc chắn muốn xóa nhóm tài liệu này? Hành động này sẽ <strong className="text-rose-600">xóa toàn bộ tài liệu</strong> bên trong nhóm khỏi cả cơ sở dữ liệu và sơ đồ tri thức Neo4j.
+            </p>
+            <div className="flex justify-end gap-2 text-xs pt-1">
+              <button
+                type="button"
+                onClick={() => setIsDeleteGroupOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl border-0 cursor-pointer transition"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedGroupId) {
+                    onDeleteGroup(selectedGroupId);
+                    setIsDeleteGroupOpen(false);
+                  }
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl border-0 cursor-pointer transition shadow-sm"
+              >
+                Đồng ý xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Modal: Xác nhận xóa tài liệu (Delete Document) */}
+      {confirmDeletingDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 backdrop-blur-sm transition-opacity duration-200">
+          <div className="relative w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col p-6 animate-in fade-in zoom-in-95 duration-200 text-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-rose-600 tracking-wider uppercase font-mono">Xóa tài liệu</h3>
+              <button 
+                type="button"
+                onClick={() => setConfirmDeletingDoc(null)}
+                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-lg transition border-0 cursor-pointer bg-transparent"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              Bạn có chắc chắn muốn xóa tài liệu <strong>"{confirmDeletingDoc.filename}"</strong>? Hành động này sẽ loại bỏ tài liệu khỏi cơ sở dữ liệu và các thực thể/quan hệ liên quan trong Neo4j.
+            </p>
+            <div className="flex justify-end gap-2 text-xs pt-1">
+              <button
+                type="button"
+                onClick={() => setConfirmDeletingDoc(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl border-0 cursor-pointer transition"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteDocument(confirmDeletingDoc.id);
+                  setConfirmDeletingDoc(null);
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl border-0 cursor-pointer transition shadow-sm"
+              >
+                Đồng ý xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

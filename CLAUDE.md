@@ -172,6 +172,11 @@ make cvt-fastmcp-2-openapi
   cd FE
   node verify_chat.cjs
   ```
+- **Run Group and Modal Deletion E2E Tests (Playwright)**:
+  ```bash
+  cd FE
+  node verify_custom_modals.cjs
+  ```
 
 ---
 

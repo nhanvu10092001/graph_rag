@@ -114,7 +114,9 @@ graph_indexing_service = GraphIndexingService(graph_rag_plugin.graph_store, llm,
 
 
 # 3. Define LangChain StructuredTool for the Agent
-def query_knowledge_graph(query: str) -> str:
+from langchain_core.runnables import RunnableConfig
+
+def query_knowledge_graph(query: str, config: RunnableConfig) -> str:
     """Queries the Neo4j Knowledge Graph using semantic search and relationship traversal.
     
     Use this tool to discover entities (e.g. facts, people, companies, locations), their descriptions, 
@@ -122,7 +124,22 @@ def query_knowledge_graph(query: str) -> str:
     """
     logger.info(f"Agent is querying Knowledge Graph for: '{query}'")
     try:
-        res = graph_query_service.retrieve_relevant_subgraph(query)
+        from app.database import SessionLocal
+        from app.models import Document
+        
+        group_id = config.get("configurable", {}).get("group_id")
+        allowed_docs = None
+        
+        if group_id is not None:
+            db = SessionLocal()
+            try:
+                docs = db.query(Document).filter(Document.group_id == group_id).all()
+                allowed_docs = [doc.filename for doc in docs]
+                logger.info(f"Filtering Graph Query to group {group_id} documents: {allowed_docs}")
+            finally:
+                db.close()
+                
+        res = graph_query_service.retrieve_relevant_subgraph(query, allowed_docs=allowed_docs)
         context_str = res.get("context_str", "")
         if not context_str or "No matching knowledge graph entities found" in context_str:
             return f"Query: '{query}'. Result: No matching entities or relationships found in the Knowledge Graph."

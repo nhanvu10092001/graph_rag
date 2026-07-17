@@ -3,10 +3,10 @@
 import logging
 import asyncio
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from app.database import SessionLocal
-from app.models import Document
+from app.models import Document, Group
 from app.services.file_storage import get_file_from_minio, delete_file_from_minio
 from app.parser import extract_text
 from app.agent import graph_indexing_service
@@ -14,11 +14,11 @@ from app.agent import graph_indexing_service
 logger = logging.getLogger("BE.services.document_service")
 
 
-def save_document_metadata(filename: str, minio_key: str) -> Dict[str, Any]:
+def save_document_metadata(filename: str, minio_key: str, group_id: Optional[int] = None) -> Dict[str, Any]:
     """Saves initial document metadata to Postgres. Creates and closes its own DB connection."""
     db = SessionLocal()
     try:
-        doc = Document(filename=filename, minio_key=minio_key, status="pending")
+        doc = Document(filename=filename, minio_key=minio_key, status="pending", group_id=group_id)
         db.add(doc)
         db.commit()
         db.refresh(doc)
@@ -27,6 +27,7 @@ def save_document_metadata(filename: str, minio_key: str) -> Dict[str, Any]:
             "filename": doc.filename,
             "minio_key": doc.minio_key,
             "status": doc.status,
+            "group_id": doc.group_id,
             "created_at": doc.created_at.isoformat()
         }
     finally:
@@ -49,11 +50,14 @@ def update_document_status(doc_id: int, status: str, entity_count: int = 0, rela
         db.close()
 
 
-def list_documents() -> List[Dict[str, Any]]:
-    """Lists all uploaded documents from Postgres. Creates and closes its own DB connection."""
+def list_documents(group_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Lists all uploaded documents from Postgres, optionally filtered by group_id. Creates and closes its own DB connection."""
     db = SessionLocal()
     try:
-        docs = db.query(Document).order_by(Document.created_at.desc()).all()
+        query = db.query(Document)
+        if group_id is not None:
+            query = query.filter(Document.group_id == group_id)
+        docs = query.order_by(Document.created_at.desc()).all()
         return [
             {
                 "id": d.id,
@@ -62,6 +66,7 @@ def list_documents() -> List[Dict[str, Any]]:
                 "status": d.status,
                 "entity_count": d.entity_count,
                 "relationship_count": d.relationship_count,
+                "group_id": d.group_id,
                 "created_at": d.created_at.isoformat()
             }
             for d in docs
@@ -131,6 +136,77 @@ def delete_document(doc_id: int) -> Dict[str, Any]:
         return {
             "status": "success",
             "message": f"Document {doc_id} deleted successfully."
+        }
+    finally:
+        db.close()
+
+
+def create_group(name: str) -> Dict[str, Any]:
+    """Creates a new document group."""
+    db = SessionLocal()
+    try:
+        # Check if exists
+        existing = db.query(Group).filter(Group.name == name).first()
+        if existing:
+            raise ValueError(f"Group with name '{name}' already exists.")
+        
+        group = Group(name=name)
+        db.add(group)
+        db.commit()
+        db.refresh(group)
+        return {
+            "id": group.id,
+            "name": group.name,
+            "created_at": group.created_at.isoformat()
+        }
+    finally:
+        db.close()
+
+
+def list_groups() -> List[Dict[str, Any]]:
+    """Lists all document groups."""
+    db = SessionLocal()
+    try:
+        groups = db.query(Group).order_by(Group.created_at.desc()).all()
+        return [
+            {
+                "id": g.id,
+                "name": g.name,
+                "created_at": g.created_at.isoformat()
+            }
+            for g in groups
+        ]
+    finally:
+        db.close()
+
+
+def delete_group(group_id: int) -> Dict[str, Any]:
+    """Deletes a group and all its documents cascade-style."""
+    db = SessionLocal()
+    try:
+        group = db.query(Group).filter(Group.id == group_id).first()
+        if not group:
+            raise ValueError(f"Group with ID {group_id} not found.")
+        
+        # 1. Fetch all documents in group
+        docs = db.query(Document).filter(Document.group_id == group_id).all()
+        doc_ids = [doc.id for doc in docs]
+        
+        # 2. Delete each document
+        for doc_id in doc_ids:
+            try:
+                delete_document(doc_id)
+            except Exception as e:
+                logger.warning(f"Failed to delete document {doc_id} during group delete: {e}")
+        
+        # 3. Delete group
+        db.delete(group)
+        db.commit()
+        
+        logger.info(f"Group {group_id} ('{group.name}') and its documents deleted successfully.")
+        return {
+            "status": "success",
+            "message": f"Group '{group.name}' and all associated documents deleted successfully."
         }
     finally:
         db.close()

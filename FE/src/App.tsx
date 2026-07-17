@@ -23,6 +23,8 @@ const DEFAULT_CONFIG: ModelConfig = {
   topK: 40,
 };
 
+const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+
 export default function App() {
   // --- States ---
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -39,10 +41,13 @@ export default function App() {
   // --- Document Indexing States & Actions ---
   const [documents, setDocuments] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
 
   const fetchDocuments = async () => {
     try {
-      const res = await fetch('/api/documents');
+      const url = selectedGroupId ? `/api/documents?group_id=${selectedGroupId}` : '/api/documents';
+      const res = await fetch(`${API_BASE}${url}`);
       if (res.ok) {
         const data = await res.json();
         setDocuments(data);
@@ -52,19 +57,78 @@ export default function App() {
     }
   };
 
+  const fetchGroups = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/groups`);
+      if (res.ok) {
+        const data = await res.json();
+        setGroups(data);
+      }
+    } catch (e) {
+      console.error('Error fetching groups:', e);
+    }
+  };
+
+  const handleCreateGroup = async (name: string) => {
+    console.log('App: handleCreateGroup called with:', name);
+    try {
+      const res = await fetch(`${API_BASE}/api/groups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (res.ok) {
+        const newGroup = await res.json();
+        await fetchGroups();
+        setSelectedGroupId(newGroup.id);
+      } else {
+        const err = await res.json();
+        alert(`Tạo nhóm thất bại: ${err.detail || 'Lỗi không xác định'}`);
+      }
+    } catch (e) {
+      console.error('Error creating group:', e);
+      alert('Gặp lỗi khi kết nối tạo nhóm!');
+    }
+  };
+
+  const handleDeleteGroup = async (id: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/groups/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        await fetchGroups();
+        setSelectedGroupId(null);
+      } else {
+        const err = await res.json();
+        alert(`Xóa nhóm thất bại: ${err.detail || 'Lỗi không xác định'}`);
+      }
+    } catch (e) {
+      console.error('Error deleting group:', e);
+      alert('Gặp lỗi khi kết nối xóa nhóm!');
+    }
+  };
+
   useEffect(() => {
     fetchDocuments();
     // Poll documents status every 5 seconds
     const interval = setInterval(fetchDocuments, 5000);
     return () => clearInterval(interval);
+  }, [selectedGroupId]);
+
+  useEffect(() => {
+    fetchGroups();
   }, []);
 
   const handleUploadFile = async (file: File) => {
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', file);
+    if (selectedGroupId !== null) {
+      formData.append('group_id', selectedGroupId.toString());
+    }
     try {
-      const res = await fetch('/api/documents/upload', {
+      const res = await fetch(`${API_BASE}/api/documents/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -112,7 +176,7 @@ export default function App() {
     // 2. Query System API Key availability on server
     const checkSystemConfig = async () => {
       try {
-        const res = await fetch('/api/config');
+        const res = await fetch(`${API_BASE}/api/config`);
         if (res.ok) {
           const data = await res.json();
           setHasSystemKey(!!data.hasSystemKey);
@@ -268,7 +332,7 @@ export default function App() {
 
     try {
       // 3. Request SSE stream from the server
-      const response = await fetch('/api/chat/stream', {
+      const response = await fetch(`${API_BASE}/api/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -283,6 +347,7 @@ export default function App() {
             topK: config.topK,
           },
           apiKey: customApiKey,
+          groupId: selectedGroupId,
         }),
       });
 
@@ -431,7 +496,7 @@ export default function App() {
 
   const handleDeleteDocument = async (id: number) => {
     try {
-      const res = await fetch(`/api/documents/${id}`, {
+      const res = await fetch(`${API_BASE}/api/documents/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -469,6 +534,11 @@ export default function App() {
         onUploadFile={handleUploadFile}
         onDeleteDocument={handleDeleteDocument}
         onRefreshDocuments={fetchDocuments}
+        groups={groups}
+        selectedGroupId={selectedGroupId}
+        onSelectGroup={setSelectedGroupId}
+        onCreateGroup={handleCreateGroup}
+        onDeleteGroup={handleDeleteGroup}
       />
 
       {/* Main Conversation Center Canvas */}

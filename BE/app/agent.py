@@ -48,6 +48,12 @@ def load_graph_rag_config() -> dict:
     llm_openai_base = os.getenv("LLM_OPENAI_API_BASE") or os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL") or llm_dict.get("openai", {}).get("base_url") or settings.openai_api_base
     emb_openai_base = os.getenv("EMBEDDINGS_OPENAI_API_BASE") or os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL") or emb_dict.get("openai", {}).get("base_url") or settings.openai_api_base
     
+    rerank_config = config_dict.get("reranking", {
+        "enabled": False,
+        "provider": "flashrank",
+        "top_k": 5
+    })
+    
     return {
         "neo4j": neo4j_config,
         "llm": {
@@ -64,7 +70,22 @@ def load_graph_rag_config() -> dict:
                 "openai_api_key": openai_key or None,
                 "openai_api_base": emb_openai_base or None
             }
-        }
+        },
+        "reranking": rerank_config,
+        "community_detection": config_dict.get("community_detection", {
+            "enabled": True,
+            "algorithm": "leiden",
+            "resolution": 1.0,
+            "max_levels": 3,
+            "auto_rebuild": False
+        }),
+        "query": config_dict.get("query", {
+            "search_mode": "auto",
+            "global_search": {
+                "max_communities": 10,
+                "default_level": 0
+            }
+        })
     }
 
 graph_rag_cfg = load_graph_rag_config()
@@ -112,15 +133,63 @@ graph_query_service = GraphQueryService(graph_rag_plugin.graph_store, embeddings
 from llm_utils_graph_rag.services.indexing import GraphIndexingService
 graph_indexing_service = GraphIndexingService(graph_rag_plugin.graph_store, llm, embeddings)
 
+# Create Community Detection Service
+from llm_utils_graph_rag.services.community import CommunityDetectionService
+community_config = graph_rag_cfg.get("community_detection", {})
+community_service = CommunityDetectionService(
+    graph_store=graph_rag_plugin.graph_store,
+    llm=llm,
+    embeddings=embeddings,
+    config=community_config,
+)
+
+# Create Global Search Service
+from llm_utils_graph_rag.services.global_search import GlobalSearchService
+global_search_service = GlobalSearchService(
+    graph_store=graph_rag_plugin.graph_store,
+    llm=llm,
+    embeddings=embeddings,
+    community_service=community_service,
+)
+
+# Query config
+query_config = graph_rag_cfg.get("query", {})
+default_search_mode = query_config.get("search_mode", "auto")
+global_search_config = query_config.get("global_search", {})
+
 
 # 3. Define LangChain StructuredTool for the Agent
 from langchain_core.runnables import RunnableConfig
 
+def _classify_search_mode(query: str) -> str:
+    """Use LLM to classify whether a query needs local or global search."""
+    import re as _re
+    prompt = (
+        "Classify the following user query into one of two categories:\n"
+        '- "local": The query asks about specific entities, people, facts, or relationships '
+        '(e.g., "Who is Alice?", "What does Company X do?", "How is A connected to B?")\n'
+        '- "global": The query asks about big-picture themes, summaries, or corpus-wide analysis '
+        '(e.g., "What are the main topics?", "Summarize the key themes", "What patterns exist?")\n\n'
+        f"Query: {query}\n\n"
+        'Respond with ONLY "local" or "global".'
+    )
+    try:
+        res = llm.invoke(prompt)
+        result = res.content.strip().lower() if hasattr(res, "content") else str(res).strip().lower()
+        result = _re.sub(r"<think>.*?</think>", "", result, flags=_re.DOTALL).strip()
+        if result in ["local", "global"]:
+            return result
+    except Exception:
+        pass
+    return "local"  # Default to local search
+
+
 def query_knowledge_graph(query: str, config: RunnableConfig) -> str:
-    """Queries the Neo4j Knowledge Graph using semantic search and relationship traversal.
+    """Queries the Neo4j Knowledge Graph using semantic search, relationship traversal,
+    and community-level global search for big-picture questions.
     
     Use this tool to discover entities (e.g. facts, people, companies, locations), their descriptions, 
-    and how they are connected to other entities (relationships).
+    relationships, and higher-level themes across the knowledge graph.
     """
     logger.info(f"Agent is querying Knowledge Graph for: '{query}'")
     try:
@@ -138,12 +207,36 @@ def query_knowledge_graph(query: str, config: RunnableConfig) -> str:
                 logger.info(f"Filtering Graph Query to group {group_id} documents: {allowed_docs}")
             finally:
                 db.close()
-                
-        res = graph_query_service.retrieve_relevant_subgraph(query, allowed_docs=allowed_docs)
-        context_str = res.get("context_str", "")
-        if not context_str or "No matching knowledge graph entities found" in context_str:
-            return f"Query: '{query}'. Result: No matching entities or relationships found in the Knowledge Graph."
-        return f"Query: '{query}'. Knowledge Graph Subgraph Results:\n{context_str}"
+
+        # Determine search mode
+        search_mode = default_search_mode
+        if search_mode == "auto":
+            search_mode = _classify_search_mode(query)
+            logger.info(f"Auto-classified search mode: {search_mode}")
+
+        if search_mode == "global" and community_config.get("enabled", False):
+            # Global Search: map-reduce over community summaries
+            logger.info("Using GLOBAL search (map-reduce over communities)")
+            res = global_search_service.search(
+                query=query,
+                level=global_search_config.get("default_level", 0),
+                max_communities=global_search_config.get("max_communities", 10),
+                allowed_docs=allowed_docs,
+            )
+            response = res.get("response", "")
+            communities_used = res.get("selected_communities", [])
+            if not response:
+                return f"Query: '{query}'. Result: No relevant community information found."
+            result_text = f"Query: '{query}'. [Global Search - Communities: {', '.join(str(c) for c in communities_used)}]\n{response}"
+            return result_text
+        else:
+            # Local Search: entity vector search + graph traversal
+            logger.info("Using LOCAL search (vector + graph traversal)")
+            res = graph_query_service.retrieve_relevant_subgraph(query, allowed_docs=allowed_docs)
+            context_str = res.get("context_str", "")
+            if not context_str or "No matching knowledge graph entities found" in context_str:
+                return f"Query: '{query}'. Result: No matching entities or relationships found in the Knowledge Graph."
+            return f"Query: '{query}'. Knowledge Graph Subgraph Results:\n{context_str}"
     except Exception as e:
         logger.error(f"Error querying knowledge graph tool: {e}")
         return f"Error occurred while querying Knowledge Graph: {str(e)}"
@@ -153,7 +246,7 @@ def query_knowledge_graph(query: str, config: RunnableConfig) -> str:
 graph_rag_tool = StructuredTool.from_function(
     func=query_knowledge_graph,
     name="query_knowledge_graph",
-    description="Query the Neo4j database to find connected facts, people, companies, relationships, and locations."
+    description="Query the Neo4j Knowledge Graph to find specific entities, relationships, and corpus-wide themes."
 )
 
 agent_tools = [graph_rag_tool]

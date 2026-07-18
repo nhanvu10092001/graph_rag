@@ -21,12 +21,125 @@ embeddings:
     base_url: "" # Custom API base URL (optional)
 
 # Reranking Configuration
+# Supported providers:
+#   1. "flashrank" (Fast, lightweight local CPU/GPU reranking using FlashRank)
+#   2. "cross_encoder" (SentenceTransformers CrossEncoder local reranking)
+#   3. "llm" (LLM-based listwise/pairwise ranking using the main OpenAI model)
 reranking:
   enabled: true
-  provider: "flashrank"
+  provider: "cross_encoder" # "flashrank" | "cross_encoder" | "llm"
   top_k: 5
+  
+  # Configuration block for FlashRank provider
   flashrank:
     model_name: "ms-marco-MiniLM-L-12-v2"
+    
+  # Configuration block for CrossEncoder provider
+  cross_encoder:
+    model_name: "BAAI/bge-reranker-large"
+    max_length: 512
+    
+  # Configuration block for LLM provider
   llm:
     max_chars_per_doc: 1200
 
+
+# -----------------------------------------------------------------------------
+# Chunking Configuration
+# -----------------------------------------------------------------------------
+chunking:
+  # Supported providers: "standard" | "contextual" | "markdown" | "code" | "parent_child"
+  provider: "standard"
+  
+  # Configuration block for standard chunker
+  standard:
+    chunk_size: 1000
+    chunk_overlap: 200
+    
+  # Configuration block for contextual chunker (enriching chunks with document context)
+  contextual:
+    chunk_size: 1000
+    chunk_overlap: 200
+    context_prompt: null
+    
+  # Configuration block for markdown chunker
+  markdown:
+    chunk_size: 1000
+    chunk_overlap: 200
+    strip_headers: false
+    
+  # Configuration block for code chunker
+  code:
+    chunk_size: 1500
+    chunk_overlap: 200
+    language: "python"
+    auto_detect_language: true
+    
+  # Configuration block for parent-child hierarchical chunker
+  parent_child:
+    parent_chunk_size: 2000
+    parent_chunk_overlap: 200
+    child_chunk_size: 500
+    child_chunk_overlap: 50
+
+
+# -----------------------------------------------------------------------------
+# Extraction (Parsing & OCR) Configuration
+# -----------------------------------------------------------------------------
+extraction:
+  pdf:
+    enable_ocr: true
+    min_chars: 50
+    
+  ocr:
+    enabled: true
+    provider: "tesseract" # "tesseract" | "paddle" | "docling" | "deepseek"
+    
+    tesseract:
+      lang: "vie+eng"
+      tesseract_cmd: ""
+      config_options: ""
+      
+    paddle:
+      lang: "vi"
+      use_angle_cls: true
+      use_gpu: false
+      det_model_dir: null
+      rec_model_dir: null
+      
+    docling:
+      enable_table_extraction: true
+      ocr_engine: "easyocr"
+      max_pages: 100
+      
+    deepseek:
+      model: "deepseek-chat"
+      api_key: ""
+      base_url: "https://api.deepseek.com"
+      max_tokens: 4096
+      max_pages: 20
+      prompt: "Extract all text from the image verbatim."
+
+
+# -----------------------------------------------------------------------------
+# Community Detection Configuration (Microsoft GraphRAG-inspired)
+# -----------------------------------------------------------------------------
+community_detection:
+  enabled: true
+  algorithm: "leiden"          # "leiden" | "louvain"
+  resolution: 1.0              # Controls granularity (higher = more, smaller communities)
+  max_levels: 3                # Number of hierarchical levels (0=finest, N=coarsest)
+  auto_rebuild: false          # Auto-rebuild communities when new documents are indexed
+
+# -----------------------------------------------------------------------------
+# Query Configuration
+# -----------------------------------------------------------------------------
+query:
+  search_mode: "auto"          # "auto" | "local" | "global"
+  # auto: LLM classifies whether query needs local (entity-focused) or global (corpus-wide) search
+  # local: Vector search + graph traversal for specific entity queries
+  # global: Map-reduce over community summaries for big-picture questions
+
+  global_search:
+    max_communities: 10        # Max communities to include in map phase
+    default_level: 0           # Default community hierarchy level for global search

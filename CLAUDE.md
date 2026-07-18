@@ -32,7 +32,7 @@ The project follows a decoupling strategy, separating core utilities, LLM integr
 2. **`llm-utils-llm`**: Factory implementations (`LLMFactory`, `EmbeddingsFactory`) for language models and embedding models, primarily supporting OpenAI.
 3. **`llm-utils-vector`**: Decoupled interface (`VectorStoreProvider`) and concrete implementations for vector search databases, specifically `Qdrant` and `PostgreSQL (pgvector)`.
 4. **`llm-utils-rag`**: End-to-end Retrieval-Augmented Generation capabilities. Contains specific services (`IndexingService`, `QueryService`, `DeletionService`) and complex retrieval features (BM25, hybrid retrieval, query transforms, reranking, and adaptive routing).
-5. **`llm-utils-graph-rag`**: Graph RAG capabilities built using **Neo4j** and **LangGraph**, enabling entity/relationship extraction, Cypher query generation with auto-correction, and hybrid search.
+5. **`llm-utils-graph-rag`**: Graph RAG capabilities built using **Neo4j** and **LangGraph**, enabling entity/relationship extraction, Cypher query generation with auto-correction, hybrid search, **Leiden community detection** (hierarchical), **LLM-powered community summaries**, and **global search** (map-reduce over communities). Supports auto search mode routing (local vs global).
 6. **`llm-utils-subagent`**: Framework for creating coordinate-ready subagents. Supports:
    - **Simple Subagents**: Single prompt-response LLM calls.
    - **ReAct Subagents**: Loops with access to custom tools.
@@ -48,9 +48,9 @@ graph_rag/
 ├── BE/                            # Backend FastAPI Application
 │   ├── app/                       # Application source package
 │   │   ├── services/              # Business logic & storage services
-│   │   ├── routers/               # FastAPI routers (chat, config, documents)
+│   │   ├── routers/               # FastAPI routers (chat, config, documents, community)
 │   │   ├── database.py            # SQLAlchemy session setup
-│   │   ├── models.py              # Database models (e.g. Document)
+│   │   ├── models.py              # Database models (e.g. Document, Group)
 │   │   ├── parser.py              # File parsing & text extraction
 │   │   └── agent.py               # LangGraph agent & tool calling config
 │   ├── alembic/                   # Database schema migrations
@@ -86,6 +86,7 @@ graph_rag/
 - **AI Framework**: LangChain (Core, OpenAI adapters, adapters for MCP)
 - **State Machine**: LangGraph (used for ReAct agents, custom graph subagents, and Cypher self-correction)
 - **Databases**: Qdrant (Vector Store), PostgreSQL with `pgvector`, Neo4j (Graph Store)
+- **Graph Analysis**: igraph + leidenalg (Python Leiden community detection fallback)
 - **Web API**: FastAPI, Uvicorn, MCPO (OpenAPI generator for MCP)
 
 ---
@@ -204,8 +205,20 @@ mypy .
 
 ---
 
+## Configuration
+
+The Graph RAG system uses a unified configuration file at `BE/graph_rag_config.yaml`. Key sections:
+- **`graph_rag`**: Neo4j connection, entity/relationship extraction prompts, embeddings
+- **`reranking`**: Reranker type, model, top_k settings
+- **`community_detection`**: Leiden algorithm config (enabled, resolution, max_levels, auto_rebuild)
+- **`query`**: Search mode (`auto`/`local`/`global`), global search params (max_communities, default_level)
+- **`chunking`**: Chunk size, overlap, strategy
+- **`parsing`**: Parser type (llm, marker, tesseract), OCR model config
+
+---
+
 ## Coding Conventions
 - **Dynamic Extensibility**: Rely on `TaskPlugin` class implementations for new actions. Dynamic package tools are registered via `llm_utils.plugins` entry points.
 - **Stateless Subagents**: The `SubagentTool` class wraps subagents (Simple, ReAct, Graph) and keeps them stateless by rebuilding the execution graph and fresh memory history on every single `run`/`arun` invocation.
-- **Service-Oriented Core**: Keep plugins thin. Delegate logic to dedicated services (e.g. `QueryService` / `GraphQueryService` for searching, `IndexingService` / `GraphIndexingService` for indexing, `DeletionService` for removal).
+- **Service-Oriented Core**: Keep plugins thin. Delegate logic to dedicated services (e.g. `QueryService` / `GraphQueryService` for searching, `IndexingService` / `GraphIndexingService` for indexing, `DeletionService` for removal, `CommunityDetectionService` for community analysis, `GlobalSearchService` for map-reduce search).
 - **Type Hinting**: All new Python classes, methods, and functions must be properly typed.

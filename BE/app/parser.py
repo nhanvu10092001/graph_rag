@@ -11,14 +11,14 @@ logger = logging.getLogger("BE.parser")
 
 
 def load_rag_config() -> dict:
-    """Loads configuration from rag_config.yaml."""
-    config_path = Path(__file__).parent.parent / "rag_config.yaml"
+    """Loads configuration from graph_rag_config.yaml."""
+    config_path = Path(__file__).parent.parent / "graph_rag_config.yaml"
     if config_path.exists():
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f) or {}
         except Exception as e:
-            logger.warning(f"Failed to load rag_config.yaml ({e}). Using default configuration.")
+            logger.warning(f"Failed to load graph_rag_config.yaml ({e}). Using default configuration.")
     return {}
 
 

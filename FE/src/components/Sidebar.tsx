@@ -6,7 +6,8 @@
 import React, { useState } from 'react';
 import { 
   Plus, MessageSquare, Trash2, Edit3, Settings, Check, X, 
-  Sparkles, ShieldCheck, Key, Bot, ChevronLeft, ChevronRight, Menu, Upload
+  Sparkles, ShieldCheck, Key, Bot, ChevronLeft, ChevronRight, Menu, Upload,
+  Globe2
 } from 'lucide-react';
 import { ChatSession, AVAILABLE_MODELS } from '../types';
 
@@ -34,6 +35,7 @@ interface SidebarProps {
   onSelectGroup: (id: number | null) => void;
   onCreateGroup: (name: string) => void;
   onDeleteGroup: (id: number) => void;
+  onOpenCommunity: () => void;
 }
 
 export default function Sidebar({
@@ -60,6 +62,7 @@ export default function Sidebar({
   onSelectGroup,
   onCreateGroup,
   onDeleteGroup,
+  onOpenCommunity,
 }: SidebarProps) {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -413,6 +416,19 @@ export default function Sidebar({
               )}
             </div>
           </div>
+
+          {/* Community Detection Button */}
+          <button
+            onClick={onOpenCommunity}
+            className="w-full flex items-center justify-between px-4 py-2.5 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-medium transition cursor-pointer shadow-sm"
+            id="open-community-btn"
+          >
+            <span className="flex items-center gap-2">
+              <Globe2 className="w-4 h-4 text-indigo-600" />
+              Community Detection
+            </span>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          </button>
 
           {/* Trigger Settings Button */}
           <button

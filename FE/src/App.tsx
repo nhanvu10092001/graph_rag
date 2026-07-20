@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
+import CommunityPanel from './components/CommunityPanel';
 import SettingsModal from './components/SettingsModal';
 import { ChatSession, Message, ModelConfig, AVAILABLE_MODELS } from './types';
 
@@ -37,6 +38,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [activeView, setActiveView] = useState<'chat' | 'community'>('chat');
 
   // --- Document Indexing States & Actions ---
   const [documents, setDocuments] = useState<any[]>([]);
@@ -539,18 +541,23 @@ export default function App() {
         onSelectGroup={setSelectedGroupId}
         onCreateGroup={handleCreateGroup}
         onDeleteGroup={handleDeleteGroup}
+        onOpenCommunity={() => setActiveView('community')}
       />
 
-      {/* Main Conversation Center Canvas */}
-      <ChatArea
-        session={activeSession}
-        onSendMessage={handleSendMessage}
-        isStreaming={isStreaming}
-        onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-        hasSystemKey={hasSystemKey}
-        customApiKey={customApiKey}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-      />
+      {/* Main Content Area — toggles between Chat and Community */}
+      {activeView === 'community' ? (
+        <CommunityPanel onBack={() => setActiveView('chat')} />
+      ) : (
+        <ChatArea
+          session={activeSession}
+          onSendMessage={handleSendMessage}
+          isStreaming={isStreaming}
+          onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          hasSystemKey={hasSystemKey}
+          customApiKey={customApiKey}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
+      )}
 
       {/* Corporate Advanced Settings Panel Modal */}
       <SettingsModal

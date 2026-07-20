@@ -5,10 +5,10 @@ from fastapi import APIRouter, HTTPException
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/community", tags=["community"])
+router = APIRouter(tags=["community"])
 
 
-@router.post("/detect")
+@router.post("/api/community/detect")
 async def detect_communities():
     """Run community detection on the current knowledge graph."""
     from app.agent import community_service
@@ -21,7 +21,7 @@ async def detect_communities():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/summarize")
+@router.post("/api/community/summarize")
 async def generate_summaries():
     """Generate LLM summaries for all detected communities."""
     from app.agent import community_service
@@ -34,7 +34,7 @@ async def generate_summaries():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/rebuild")
+@router.post("/api/community/rebuild")
 async def rebuild_communities():
     """Full rebuild: clear old communities, re-detect, and re-summarize."""
     from app.agent import community_service
@@ -47,7 +47,7 @@ async def rebuild_communities():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/list")
+@router.get("/api/community/list")
 async def list_communities(level: int = 0):
     """List all community summaries at a given hierarchy level."""
     from app.agent import community_service
@@ -60,7 +60,7 @@ async def list_communities(level: int = 0):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/search")
+@router.get("/api/community/search")
 async def search_communities(query: str, top_k: int = 5, level: int = 0):
     """Vector search over community summaries."""
     from app.agent import community_service
@@ -71,3 +71,4 @@ async def search_communities(query: str, top_k: int = 5, level: int = 0):
     except Exception as e:
         logger.error(f"Community search failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+

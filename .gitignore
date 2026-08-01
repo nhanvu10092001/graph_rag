@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# RAG Package (private source code - do not commit)
+RAG_package/

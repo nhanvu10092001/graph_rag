@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { ChatSession, Message, AVAILABLE_MODELS } from '../types';
 import MarkdownRenderer from './MarkdownRenderer';
+import { ToolCallBadge } from './ToolCallBadge';
 
 interface ChatAreaProps {
   session: ChatSession | null;
@@ -270,8 +271,8 @@ export default function ChatArea({
                     </div>
 
                     <div className={`p-4 rounded-2xl shadow-sm border ${
-                      isUser 
-                        ? 'bg-slate-100 text-slate-800 rounded-tr-none border-slate-200/60' 
+                      isUser
+                        ? 'bg-slate-100 text-slate-800 rounded-tr-none border-slate-200/60'
                         : message.error
                           ? 'bg-rose-50 border-rose-200 text-rose-700 rounded-tl-none'
                           : 'bg-white border border-slate-200 rounded-tl-none text-slate-800 shadow-sm'
@@ -279,7 +280,16 @@ export default function ChatArea({
                       {isUser ? (
                         <p className="whitespace-pre-wrap text-sm break-words leading-relaxed">{message.content}</p>
                       ) : (
-                        <MarkdownRenderer content={message.content} />
+                        <>
+                          {message.toolCalls && Object.keys(message.toolCalls).length > 0 && (
+                            <div className="mb-3 space-y-1">
+                              {Object.values(message.toolCalls).map((tc, idx) => (
+                                <ToolCallBadge key={tc.id || idx} toolCall={tc} />
+                              ))}
+                            </div>
+                          )}
+                          {message.content && <MarkdownRenderer content={message.content} />}
+                        </>
                       )}
                     </div>
                   </div>

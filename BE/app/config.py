@@ -27,11 +27,13 @@ class Settings:
 
         # LLM Config
         llm_dict = config_dict.get("llm", {})
-        self.llm_provider = "openai"
+        self.llm_provider = os.getenv("LLM_PROVIDER") or llm_dict.get("provider") or "openai"
         self.llm_model = os.getenv("LLM_MODEL") or llm_dict.get("model") or "gpt-4o-mini"
         self.llm_temperature = float(os.getenv("LLM_TEMPERATURE") or llm_dict.get("temperature") or 0.7)
         self.openai_api_key = os.getenv("OPENAI_API_KEY") or llm_dict.get("api_key") or ""
         self.openai_api_base = os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL") or llm_dict.get("base_url") or None
+        self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN") or llm_dict.get("api_key") or ""
+        self.anthropic_api_url = os.getenv("ANTHROPIC_BASE_URL") or llm_dict.get("base_url") or None
 
         # Embeddings Config
         emb_dict = config_dict.get("embeddings", {})
@@ -67,8 +69,12 @@ class Settings:
             raise ValueError("Neo4j username is required")
         if not self.neo4j_password:
             raise ValueError("Neo4j password is required")
-        if not self.openai_api_key and not os.getenv("OPENAI_API_KEY"):
-            raise ValueError("OPENAI_API_KEY is required")
+        if self.llm_provider == "claude":
+            if not self.anthropic_api_key and not os.getenv("ANTHROPIC_API_KEY") and not os.getenv("ANTHROPIC_AUTH_TOKEN"):
+                raise ValueError("ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN is required for claude provider")
+        else:
+            if not self.openai_api_key and not os.getenv("OPENAI_API_KEY"):
+                raise ValueError("OPENAI_API_KEY is required")
 
 
 def load_config(config_path: Path = DEFAULT_CONFIG_PATH) -> Settings:

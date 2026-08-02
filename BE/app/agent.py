@@ -36,33 +36,47 @@ def load_graph_rag_config() -> dict:
     
     # Resolve llm config
     llm_dict = config_dict.get("llm", {})
-    llm_model = os.getenv("LLM_MODEL") or llm_dict.get("openai", {}).get("model") or "gpt-4o-mini"
-    llm_temp = float(os.getenv("LLM_TEMPERATURE") or llm_dict.get("openai", {}).get("temperature") or 0.7)
+    llm_provider = os.getenv("LLM_PROVIDER") or llm_dict.get("provider") or "openai"
+
+    if llm_provider == "claude":
+        claude_dict = llm_dict.get("claude", {})
+        llm_model = os.getenv("LLM_MODEL") or claude_dict.get("model") or "claude-haiku-4-5-20251001"
+        llm_temp = float(os.getenv("LLM_TEMPERATURE") or claude_dict.get("temperature") or 0.7)
+        llm_max_tokens = int(claude_dict.get("max_tokens") or 4096)
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN") or claude_dict.get("api_key") or ""
+        anthropic_url = os.getenv("LLM_ANTHROPIC_API_URL") or os.getenv("ANTHROPIC_BASE_URL") or claude_dict.get("base_url") or None
+    else:
+        openai_dict = llm_dict.get("openai", {})
+        llm_model = os.getenv("LLM_MODEL") or openai_dict.get("model") or "gpt-4o-mini"
+        llm_temp = float(os.getenv("LLM_TEMPERATURE") or openai_dict.get("temperature") or 0.7)
     
     # Resolve embeddings config
     emb_dict = config_dict.get("embeddings", {})
     emb_model = os.getenv("EMBEDDINGS_MODEL") or emb_dict.get("openai", {}).get("model") or "text-embedding-3-small"
     
+    llm_config = {"provider": llm_provider, "model": llm_model, "temperature": llm_temp}
+    if llm_provider == "claude":
+        llm_config["anthropic_api_key"] = anthropic_key or None
+        llm_config["anthropic_api_url"] = anthropic_url or None
+        llm_config["max_tokens"] = llm_max_tokens
+    else:
+        openai_key = os.getenv("OPENAI_API_KEY") or settings.openai_api_key
+        llm_openai_base = os.getenv("LLM_OPENAI_API_BASE") or os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL") or llm_dict.get("openai", {}).get("base_url") or settings.openai_api_base
+        llm_config["openai_api_key"] = openai_key or None
+        llm_config["openai_api_base"] = llm_openai_base or None
+
     openai_key = os.getenv("OPENAI_API_KEY") or settings.openai_api_key
-    
-    llm_openai_base = os.getenv("LLM_OPENAI_API_BASE") or os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL") or llm_dict.get("openai", {}).get("base_url") or settings.openai_api_base
     emb_openai_base = os.getenv("EMBEDDINGS_OPENAI_API_BASE") or os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL") or emb_dict.get("openai", {}).get("base_url") or settings.openai_api_base
-    
+
     rerank_config = config_dict.get("reranking", {
         "enabled": False,
         "provider": "flashrank",
         "top_k": 5
     })
-    
+
     return {
         "neo4j": neo4j_config,
-        "llm": {
-            "provider": "openai",
-            "model": llm_model,
-            "temperature": llm_temp,
-            "openai_api_key": openai_key or None,
-            "openai_api_base": llm_openai_base or None
-        },
+        "llm": llm_config,
         "embeddings": {
             "provider": "openai",
             "openai": {
@@ -90,20 +104,36 @@ def load_graph_rag_config() -> dict:
 
 graph_rag_cfg = load_graph_rag_config()
 
-# 1. Initialize OpenAI LLM
-llm_model = graph_rag_cfg["llm"]["model"]
-llm_temp = graph_rag_cfg["llm"]["temperature"]
-openai_key = graph_rag_cfg["llm"]["openai_api_key"]
-openai_base = graph_rag_cfg["llm"]["openai_api_base"]
+# 1. Initialize LLM based on provider
+llm_cfg = graph_rag_cfg["llm"]
+llm_provider = llm_cfg["provider"]
+llm_model = llm_cfg["model"]
+llm_temp = llm_cfg["temperature"]
 
-from langchain_openai import ChatOpenAI
-logger.info(f"Using ChatOpenAI: {llm_model} (Base URL: {openai_base})")
-llm = ChatOpenAI(
-    model=llm_model,
-    temperature=llm_temp,
-    openai_api_key=openai_key or None,
-    openai_api_base=openai_base or None
-)
+if llm_provider == "claude":
+    from langchain_anthropic import ChatAnthropic
+    anthropic_key = llm_cfg.get("anthropic_api_key")
+    anthropic_url = llm_cfg.get("anthropic_api_url")
+    llm_max_tokens = llm_cfg.get("max_tokens", 4096)
+    logger.info(f"Using ChatAnthropic: {llm_model} (Base URL: {anthropic_url})")
+    llm = ChatAnthropic(
+        model=llm_model,
+        temperature=llm_temp,
+        max_tokens=llm_max_tokens,
+        anthropic_api_key=anthropic_key or None,
+        anthropic_api_url=anthropic_url or None,
+    )
+else:
+    from langchain_openai import ChatOpenAI
+    openai_key = llm_cfg.get("openai_api_key")
+    openai_base = llm_cfg.get("openai_api_base")
+    logger.info(f"Using ChatOpenAI: {llm_model} (Base URL: {openai_base})")
+    llm = ChatOpenAI(
+        model=llm_model,
+        temperature=llm_temp,
+        openai_api_key=openai_key or None,
+        openai_api_base=openai_base or None,
+    )
 
 
 # 2. Construct plugin configuration dict

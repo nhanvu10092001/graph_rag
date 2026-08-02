@@ -8,7 +8,7 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import CommunityPanel from './components/CommunityPanel';
 import SettingsModal from './components/SettingsModal';
-import { ChatSession, Message, ModelConfig, AVAILABLE_MODELS } from './types';
+import { ChatSession, Message, ModelConfig, AVAILABLE_MODELS, ToolCallState } from './types';
 
 // Default corporate AI Assistant instruction
 const DEFAULT_SYSTEM_INSTRUCTION = 
@@ -384,6 +384,7 @@ export default function App() {
       });
 
       let accumulatedText = '';
+      const currentToolCalls: Record<number, ToolCallState> = {};
       let buffer = '';
 
       while (true) {
@@ -416,32 +417,80 @@ export default function App() {
                 throw new Error(parsed.error);
               }
 
-              if (parsed.text) {
-                accumulatedText += parsed.text;
+              const msgType = parsed.type || (parsed.text !== undefined ? 'text_delta' : 'unknown');
 
-                // Update session's assistant message and user message status (to 'delivered')
-                setSessions((prevSessions) => {
-                  const next = prevSessions.map((s) => {
-                    if (s.id === sessionToUse.id) {
-                      return {
-                        ...s,
-                        messages: s.messages.map((m) => {
-                          if (m.id === assistantMessageId) {
-                            return { ...m, content: accumulatedText };
-                          }
-                          if (m.id === userMessage.id && m.status !== 'delivered' && m.status !== 'read') {
-                            return { ...m, status: 'delivered' as const };
-                          }
-                          return m;
-                        }),
-                      };
-                    }
-                    return s;
-                  });
-                  localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
-                  return next;
-                });
+              if (msgType === 'text_delta') {
+                const chunkText = parsed.content || parsed.text || '';
+                accumulatedText += chunkText;
+              } else if (msgType === 'tool_call_delta') {
+                const index = parsed.index ?? 0;
+                const existing = currentToolCalls[index] || { args: '', status: 'calling' };
+                currentToolCalls[index] = {
+                  ...existing,
+                  id: parsed.id || existing.id,
+                  name: parsed.name || existing.name,
+                  args: existing.args + (parsed.args || ''),
+                  status: existing.status === 'completed' ? 'completed' : 'calling',
+                };
+              } else if (msgType === 'tool_call_executing') {
+                let targetIndex = 0;
+                for (const [k, v] of Object.entries(currentToolCalls)) {
+                  if (v.name === parsed.name || v.id === parsed.id) {
+                    targetIndex = Number(k);
+                    break;
+                  }
+                }
+                const existing = currentToolCalls[targetIndex] || { args: '', status: 'executing' };
+                currentToolCalls[targetIndex] = {
+                  ...existing,
+                  id: parsed.id || existing.id,
+                  name: parsed.name || existing.name,
+                  input: parsed.input || existing.input,
+                  status: 'executing',
+                };
+              } else if (msgType === 'tool_call_end') {
+                let targetIndex = 0;
+                for (const [k, v] of Object.entries(currentToolCalls)) {
+                  if (v.name === parsed.name || v.id === parsed.id) {
+                    targetIndex = Number(k);
+                    break;
+                  }
+                }
+                const existing = currentToolCalls[targetIndex] || { args: '', status: 'completed' };
+                currentToolCalls[targetIndex] = {
+                  ...existing,
+                  status: 'completed',
+                };
               }
+
+              const toolCallsSnapshot = Object.keys(currentToolCalls).length > 0 ? { ...currentToolCalls } : undefined;
+
+              // Update session's assistant message and user message status (to 'delivered')
+              setSessions((prevSessions) => {
+                const next = prevSessions.map((s) => {
+                  if (s.id === sessionToUse.id) {
+                    return {
+                      ...s,
+                      messages: s.messages.map((m) => {
+                        if (m.id === assistantMessageId) {
+                          return {
+                            ...m,
+                            content: accumulatedText,
+                            ...(toolCallsSnapshot ? { toolCalls: toolCallsSnapshot } : {})
+                          };
+                        }
+                        if (m.id === userMessage.id && m.status !== 'delivered' && m.status !== 'read') {
+                          return { ...m, status: 'delivered' as const };
+                        }
+                        return m;
+                      }),
+                    };
+                  }
+                  return s;
+                });
+                localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
+                return next;
+              });
             }
           }
           boundary = buffer.indexOf('\n\n');

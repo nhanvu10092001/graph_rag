@@ -5,10 +5,19 @@
 
 export type Role = 'user' | 'model';
 
+export interface ToolCallState {
+  id?: string;
+  name?: string;
+  args: string;
+  input?: any;
+  status: 'calling' | 'executing' | 'completed' | 'error';
+}
+
 export interface Message {
   id: string;
   role: Role;
   content: string;
+  toolCalls?: Record<number, ToolCallState>;
   timestamp: number;
   modelUsed?: string;
   error?: boolean;

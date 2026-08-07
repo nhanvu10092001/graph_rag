@@ -4,25 +4,20 @@
  */
 
 import React, { useState } from 'react';
-import { 
-  Plus, MessageSquare, Trash2, Edit3, Settings, Check, X, 
-  Sparkles, ShieldCheck, Key, Bot, ChevronLeft, ChevronRight, Menu, Upload,
-  Globe2
+import {
+  Plus, MessageSquare, Trash2, Edit3, Settings, Check, X,
+  Bot, ChevronRight, Upload, Globe2
 } from 'lucide-react';
-import { ChatSession, AVAILABLE_MODELS } from '../types';
+import { ChatSession } from '../types';
 
 interface SidebarProps {
   sessions: ChatSession[];
   activeSessionId: string | null;
   onSelectSession: (id: string) => void;
-  onNewSession: (modelId: string) => void;
+  onNewSession: () => void;
   onDeleteSession: (id: string) => void;
   onRenameSession: (id: string, newTitle: string) => void;
   onOpenSettings: () => void;
-  hasSystemKey: boolean;
-  customApiKey: string;
-  selectedModelId: string;
-  onSelectModel: (id: string) => void;
   isMobileOpen: boolean;
   onToggleMobile: () => void;
   documents: any[];
@@ -46,10 +41,6 @@ export default function Sidebar({
   onDeleteSession,
   onRenameSession,
   onOpenSettings,
-  hasSystemKey,
-  customApiKey,
-  selectedModelId,
-  onSelectModel,
   isMobileOpen,
   onToggleMobile,
   documents,
@@ -68,7 +59,6 @@ export default function Sidebar({
   const [editTitle, setEditTitle] = useState('');
   const [deletingDocId, setDeletingDocId] = useState<number | null>(null);
 
-  // Custom modal states to replace native browser popups
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [isDeleteGroupOpen, setIsDeleteGroupOpen] = useState(false);
@@ -102,77 +92,56 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Mobile Backdrop Overlay */}
+      {/* Mobile Backdrop */}
       {isMobileOpen && (
-        <div 
+        <div
           onClick={onToggleMobile}
           className="fixed inset-0 z-40 bg-black/25 backdrop-blur-sm lg:hidden"
         />
       )}
 
-      {/* Sidebar Container */}
-      <aside 
-        className={`fixed inset-y-0 left-0 z-40 flex flex-col w-72 bg-slate-50 border-r border-slate-200 text-slate-700 transition-transform duration-300 transform 
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col w-72 bg-slate-50 border-r border-slate-200 text-slate-700 transition-transform duration-300 transform
           lg:translate-x-0 lg:static lg:h-full lg:flex-shrink-0
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
         id="app-sidebar"
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-indigo-50 border border-indigo-100/80 rounded-lg">
-              <Bot className="w-5 h-5 text-indigo-600" />
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-sm">
+              <Bot className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-sm font-semibold text-slate-800 tracking-tight">Graph RAG Hub</h1>
-              <p className="text-[10px] text-slate-400 font-mono tracking-wider">ENTERPRISE CHAT</p>
+              <h1 className="text-sm font-bold text-slate-800 tracking-tight">Graph RAG</h1>
+              <p className="text-[10px] text-slate-400 font-medium">Knowledge Assistant</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onToggleMobile}
-            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded lg:hidden"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg lg:hidden transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Action: Create New Conversation */}
-        <div className="p-4 space-y-3 bg-white border-b border-slate-100">
+        {/* New Chat Button */}
+        <div className="p-4 bg-white border-b border-slate-100">
           <button
             onClick={() => {
-              onNewSession(selectedModelId);
+              onNewSession();
               if (isMobileOpen) onToggleMobile();
             }}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-xs shadow-sm hover:shadow-md transition active:scale-[0.98] cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold rounded-xl text-xs shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
             id="new-chat-btn"
           >
             <Plus className="w-4 h-4" />
             Tạo hội thoại mới
           </button>
-
-          {/* Model Selector in Sidebar */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 tracking-wider block font-mono">DÒNG MÔ HÌNH CHUẨN</label>
-            <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 border border-slate-200 rounded-xl">
-              {AVAILABLE_MODELS.map((model) => (
-                <button
-                  key={model.id}
-                  onClick={() => onSelectModel(model.id)}
-                  className={`px-2 py-1.5 text-[11px] font-medium rounded-lg transition-all cursor-pointer ${
-                    selectedModelId === model.id
-                      ? 'bg-white text-indigo-600 font-semibold border border-slate-200/80 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                  title={model.description}
-                >
-                  {model.name}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* Navigation Section: List of Sessions */}
+        {/* Sessions List */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           <div className="flex items-center justify-between px-3 pb-2 text-[10px] font-bold text-slate-400 tracking-wider font-mono">
             <span>LỊCH SỬ HỘI THOẠI</span>
@@ -197,18 +166,21 @@ export default function Sidebar({
                       onSelectSession(session.id);
                       if (isMobileOpen) onToggleMobile();
                     }}
-                    className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition cursor-pointer ${
-                      isActive 
-                        ? 'bg-slate-200/60 border border-slate-200/80 text-slate-900 font-semibold' 
-                        : 'text-slate-600 hover:bg-slate-200/30 hover:text-slate-900'
+                    className={`group relative flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition cursor-pointer ${
+                      isActive
+                        ? 'bg-white border border-indigo-100 text-slate-900 font-semibold shadow-sm'
+                        : 'text-slate-600 hover:bg-white/60 hover:text-slate-900'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {isActive && (
+                        <div className="w-0.5 h-5 bg-indigo-500 rounded-full shrink-0" />
+                      )}
                       <MessageSquare className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
-                      
+
                       {isEditing ? (
-                        <form 
-                          onSubmit={(e) => submitRename(session.id, e)} 
+                        <form
+                          onSubmit={(e) => submitRename(session.id, e)}
                           className="flex items-center gap-1 flex-1 min-w-0"
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -220,15 +192,15 @@ export default function Sidebar({
                             autoFocus
                             id={`rename-input-${session.id}`}
                           />
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={(e) => submitRename(session.id, e)}
                             className="text-indigo-600 hover:text-indigo-500 p-0.5"
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={cancelRename}
                             className="text-slate-400 hover:text-slate-700 p-0.5"
                           >
@@ -240,9 +212,8 @@ export default function Sidebar({
                       )}
                     </div>
 
-                    {/* Quick Session Actions */}
                     {!isEditing && (
-                      <div className="absolute right-2 hidden group-hover:flex items-center gap-1 bg-slate-100 pl-2 py-0.5 rounded-l border-l border-slate-100">
+                      <div className="absolute right-2 hidden group-hover:flex items-center gap-1 bg-slate-50 pl-2 py-0.5 rounded-l border-l border-slate-100">
                         <button
                           onClick={(e) => startRename(session, e)}
                           className="text-slate-500 hover:text-indigo-600 p-1 rounded hover:bg-slate-200 transition"
@@ -271,11 +242,11 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* RAG Documents Indexing Manager */}
+        {/* Document Manager */}
         <div className="border-t border-slate-200 bg-white p-4 space-y-3 shrink-0">
           <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 tracking-wider font-mono">
             <span>TÀI LIỆU GRAPH RAG</span>
-            <button 
+            <button
               onClick={onRefreshDocuments}
               className="text-indigo-600 hover:text-indigo-700 font-semibold cursor-pointer hover:underline text-[9px] bg-transparent border-0 p-0"
             >
@@ -283,7 +254,7 @@ export default function Sidebar({
             </button>
           </div>
 
-          {/* Group Selector Dropdown */}
+          {/* Group Selector */}
           <div className="flex items-center gap-1.5">
             <select
               value={selectedGroupId || ''}
@@ -311,9 +282,7 @@ export default function Sidebar({
             {selectedGroupId && (
               <button
                 type="button"
-                onClick={() => {
-                  setIsDeleteGroupOpen(true);
-                }}
+                onClick={() => setIsDeleteGroupOpen(true)}
                 className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border-0 cursor-pointer transition flex items-center justify-center"
                 title="Xóa nhóm này"
               >
@@ -322,6 +291,7 @@ export default function Sidebar({
             )}
           </div>
 
+          {/* File Upload */}
           <div className="relative">
             <input
               type="file"
@@ -334,8 +304,8 @@ export default function Sidebar({
             <label
               htmlFor="rag-file-upload"
               className={`w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed rounded-xl text-xs font-medium cursor-pointer transition-all ${
-                isUploading 
-                  ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed' 
+                isUploading
+                  ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed'
                   : 'border-indigo-200 hover:border-indigo-400 bg-indigo-50/20 hover:bg-indigo-50/40 text-indigo-600'
               }`}
             >
@@ -344,6 +314,7 @@ export default function Sidebar({
             </label>
           </div>
 
+          {/* Document List */}
           <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-1">
             {documents.length === 0 ? (
               <p className="text-[10px] text-slate-400 text-center py-2 font-medium">Chưa có tài liệu nào</p>
@@ -386,38 +357,8 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Sidebar Footer Info & Trigger Settings */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
-          {/* Status Indicator */}
-          <div className="p-3 bg-slate-100 border border-slate-200 rounded-xl space-y-2">
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="text-slate-400 font-mono">BẢO MẬT API</span>
-              <span className="flex items-center gap-1 text-indigo-600">
-                <ShieldCheck className="w-3.5 h-3.5" /> Bảo mật
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-2 text-xs">
-              {customApiKey ? (
-                <div className="flex items-center gap-1.5 text-indigo-600 font-medium">
-                  <Key className="w-3.5 h-3.5" />
-                  <span className="truncate max-w-[120px]">Key Cá Nhân</span>
-                </div>
-              ) : hasSystemKey ? (
-                <div className="flex items-center gap-1.5 text-indigo-600 font-medium">
-                  <Bot className="w-3.5 h-3.5" />
-                  <span>Key Máy Chủ</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-amber-600 font-medium">
-                  <X className="w-3.5 h-3.5" />
-                  <span>Thiếu API Key</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Community Detection Button */}
+        {/* Footer Actions */}
+        <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-2">
           <button
             onClick={onOpenCommunity}
             className="w-full flex items-center justify-between px-4 py-2.5 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 border border-slate-200 rounded-xl text-xs font-medium transition cursor-pointer shadow-sm"
@@ -430,7 +371,6 @@ export default function Sidebar({
             <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
           </button>
 
-          {/* Trigger Settings Button */}
           <button
             onClick={onOpenSettings}
             className="w-full flex items-center justify-between px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-800 border border-slate-200 rounded-xl text-xs font-medium transition cursor-pointer shadow-sm"
@@ -445,13 +385,13 @@ export default function Sidebar({
         </div>
       </aside>
 
-      {/* 1. Modal: Tạo nhóm mới (Create Group) */}
+      {/* Modal: Create Group */}
       {isCreateGroupOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 backdrop-blur-sm transition-opacity duration-200">
           <div className="relative w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col p-6 animate-in fade-in zoom-in-95 duration-200 text-slate-800 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 tracking-wider uppercase font-mono">Tạo nhóm mới</h3>
-              <button 
+              <button
                 type="button"
                 onClick={() => setIsCreateGroupOpen(false)}
                 className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-lg transition border-0 cursor-pointer bg-transparent"
@@ -488,7 +428,6 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={() => {
-                  console.log('Sidebar: Clicked Tạo button, input value:', newGroupName);
                   if (newGroupName.trim()) {
                     onCreateGroup(newGroupName.trim());
                     setNewGroupName('');
@@ -504,13 +443,13 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* 2. Modal: Xác nhận xóa nhóm tài liệu (Delete Group) */}
+      {/* Modal: Delete Group */}
       {isDeleteGroupOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 backdrop-blur-sm transition-opacity duration-200">
           <div className="relative w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col p-6 animate-in fade-in zoom-in-95 duration-200 text-slate-800 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-rose-600 tracking-wider uppercase font-mono">Xóa nhóm tài liệu</h3>
-              <button 
+              <button
                 type="button"
                 onClick={() => setIsDeleteGroupOpen(false)}
                 className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-lg transition border-0 cursor-pointer bg-transparent"
@@ -546,13 +485,13 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* 3. Modal: Xác nhận xóa tài liệu (Delete Document) */}
+      {/* Modal: Delete Document */}
       {confirmDeletingDoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 backdrop-blur-sm transition-opacity duration-200">
           <div className="relative w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden flex flex-col p-6 animate-in fade-in zoom-in-95 duration-200 text-slate-800 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-rose-600 tracking-wider uppercase font-mono">Xóa tài liệu</h3>
-              <button 
+              <button
                 type="button"
                 onClick={() => setConfirmDeletingDoc(null)}
                 className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-lg transition border-0 cursor-pointer bg-transparent"

@@ -8,16 +8,14 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import CommunityPanel from './components/CommunityPanel';
 import SettingsModal from './components/SettingsModal';
-import { ChatSession, Message, ModelConfig, AVAILABLE_MODELS, ToolCallState } from './types';
+import { ChatSession, Message, ModelConfig, ToolCallState } from './types';
 
-// Default corporate AI Assistant instruction
-const DEFAULT_SYSTEM_INSTRUCTION = 
+const DEFAULT_SYSTEM_INSTRUCTION =
   "Bạn là một Trợ lý AI cao cấp chuyên nghiệp, lịch sự và đáng tin cậy. " +
   "Hãy cung cấp câu trả lời rõ ràng, chính xác, cấu trúc mạch lạc sử dụng định dạng Markdown " +
   "và viết bằng tiếng Việt tự nhiên trừ khi người dùng yêu cầu ngôn ngữ khác.";
 
 const DEFAULT_CONFIG: ModelConfig = {
-  model: 'gpt-4o-mini',
   systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
   temperature: 0.7,
   topP: 0.95,
@@ -27,20 +25,15 @@ const DEFAULT_CONFIG: ModelConfig = {
 const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
 export default function App() {
-  // --- States ---
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [selectedModelId, setSelectedModelId] = useState<string>('gpt-4o-mini');
   const [config, setConfig] = useState<ModelConfig>(DEFAULT_CONFIG);
-  const [customApiKey, setCustomApiKey] = useState<string>('');
-  const [hasSystemKey, setHasSystemKey] = useState<boolean>(true);
-  
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeView, setActiveView] = useState<'chat' | 'community'>('chat');
 
-  // --- Document Indexing States & Actions ---
   const [documents, setDocuments] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [groups, setGroups] = useState<any[]>([]);
@@ -72,7 +65,6 @@ export default function App() {
   };
 
   const handleCreateGroup = async (name: string) => {
-    console.log('App: handleCreateGroup called with:', name);
     try {
       const res = await fetch(`${API_BASE}/api/groups`, {
         method: 'POST',
@@ -113,7 +105,6 @@ export default function App() {
 
   useEffect(() => {
     fetchDocuments();
-    // Poll documents status every 5 seconds
     const interval = setInterval(fetchDocuments, 5000);
     return () => clearInterval(interval);
   }, [selectedGroupId]);
@@ -147,12 +138,7 @@ export default function App() {
     }
   };
 
-  // --- Initial Mount & State Loading ---
   useEffect(() => {
-    // 1. Load config & API Key from localStorage
-    const savedApiKey = localStorage.getItem('openai_chat_api_key') || '';
-    setCustomApiKey(savedApiKey);
-
     const savedConfig = localStorage.getItem('openai_chat_config');
     if (savedConfig) {
       try {
@@ -174,23 +160,8 @@ export default function App() {
         console.error('Failed to parse saved sessions');
       }
     }
-
-    // 2. Query System API Key availability on server
-    const checkSystemConfig = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/config`);
-        if (res.ok) {
-          const data = await res.json();
-          setHasSystemKey(!!data.hasSystemKey);
-        }
-      } catch (e) {
-        console.error('Error contacting config API', e);
-      }
-    };
-    checkSystemConfig();
   }, []);
 
-  // --- State Persistence ---
   const saveSessionsToLocal = (newSessions: ChatSession[]) => {
     setSessions(newSessions);
     localStorage.setItem('openai_chat_sessions', JSON.stringify(newSessions));
@@ -201,26 +172,15 @@ export default function App() {
     localStorage.setItem('openai_chat_config', JSON.stringify(newConfig));
   };
 
-  const handleSaveApiKey = (newKey: string) => {
-    setCustomApiKey(newKey);
-    localStorage.setItem('openai_chat_api_key', newKey);
-  };
-
-  // --- Chat Handlers ---
   const handleSelectSession = (id: string) => {
     setActiveSessionId(id);
-    const session = sessions.find((s) => s.id === id);
-    if (session) {
-      setSelectedModelId(session.model);
-    }
   };
 
-  const handleNewSession = (modelId: string): ChatSession => {
+  const handleNewSession = (): ChatSession => {
     const newSession: ChatSession = {
       id: crypto.randomUUID(),
       title: 'Hội thoại mới',
       messages: [],
-      model: modelId,
       systemInstruction: config.systemInstruction,
       temperature: config.temperature,
       createdAt: Date.now(),
@@ -246,24 +206,12 @@ export default function App() {
   };
 
   const handleRenameSession = (id: string, newTitle: string) => {
-    const updatedSessions = sessions.map((s) => 
+    const updatedSessions = sessions.map((s) =>
       s.id === id ? { ...s, title: newTitle } : s
     );
     saveSessionsToLocal(updatedSessions);
   };
 
-  const handleSelectModel = (id: string) => {
-    setSelectedModelId(id);
-    // If we have an active session, update its model
-    if (activeSessionId) {
-      const updatedSessions = sessions.map((s) => 
-        s.id === activeSessionId ? { ...s, model: id } : s
-      );
-      saveSessionsToLocal(updatedSessions);
-    }
-  };
-
-  // --- Message Sending and SSE Streaming Logic ---
   const handleSendMessage = async (text: string) => {
     if (isStreaming) return;
 
@@ -271,13 +219,11 @@ export default function App() {
     let sessionToUse: ChatSession;
     let sessionsListToMap = sessions;
 
-    // 1. Create a session on the fly if none is active or exists
     if (!currentSession) {
       sessionToUse = {
         id: crypto.randomUUID(),
         title: 'Hội thoại mới',
         messages: [],
-        model: selectedModelId,
         systemInstruction: config.systemInstruction,
         temperature: config.temperature,
         createdAt: Date.now(),
@@ -288,7 +234,6 @@ export default function App() {
       sessionToUse = currentSession;
     }
 
-    // 2. Construct user message
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -297,25 +242,23 @@ export default function App() {
       status: 'sending',
     };
 
-    // Auto rename conversation based on first prompt
     const isFirstMessage = sessionToUse.messages.length === 0;
     const originalTitle = sessionToUse.title;
-    const newTitle = isFirstMessage 
-      ? text.length > 30 
-        ? text.substring(0, 30) + '...' 
-        : text 
+    const newTitle = isFirstMessage
+      ? text.length > 30
+        ? text.substring(0, 30) + '...'
+        : text
       : originalTitle;
 
     const updatedMessages = [...sessionToUse.messages, userMessage];
-    
-    // Create assistant placeholder message
+
     const assistantMessageId = crypto.randomUUID();
     const assistantPlaceholderMessage: Message = {
       id: assistantMessageId,
       role: 'model',
       content: '',
       timestamp: Date.now(),
-      modelUsed: AVAILABLE_MODELS.find(m => m.id === sessionToUse.model)?.name || sessionToUse.model,
+      modelUsed: 'Graph RAG Assistant',
     };
 
     const initialSessionsState = sessionsListToMap.map((s) => {
@@ -333,7 +276,6 @@ export default function App() {
     setIsStreaming(true);
 
     try {
-      // 3. Request SSE stream from the server
       const response = await fetch(`${API_BASE}/api/chat/stream`, {
         method: 'POST',
         headers: {
@@ -341,20 +283,18 @@ export default function App() {
         },
         body: JSON.stringify({
           messages: updatedMessages,
-          model: sessionToUse.model,
           config: {
             systemInstruction: config.systemInstruction,
             temperature: config.temperature,
             topP: config.topP,
             topK: config.topK,
           },
-          apiKey: customApiKey,
           groupId: selectedGroupId,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Không thể kết nối đến máy chủ API hoặc khóa của bạn bị lỗi.');
+        throw new Error('Không thể kết nối đến máy chủ API.');
       }
 
       const reader = response.body?.getReader();
@@ -364,15 +304,14 @@ export default function App() {
         throw new Error('Dữ liệu luồng không phản hồi.');
       }
 
-      // Transition user message status to 'sent'
       setSessions((prevSessions) => {
         const next = prevSessions.map((s) => {
           if (s.id === sessionToUse.id) {
             return {
               ...s,
-              messages: s.messages.map((m) => 
-                m.id === userMessage.id 
-                  ? { ...m, status: 'sent' as const } 
+              messages: s.messages.map((m) =>
+                m.id === userMessage.id
+                  ? { ...m, status: 'sent' as const }
                   : m
               ),
             };
@@ -409,7 +348,6 @@ export default function App() {
               try {
                 parsed = JSON.parse(dataStr);
               } catch (e: any) {
-                // Ignore parsing incomplete JSON lines
                 continue;
               }
 
@@ -465,7 +403,6 @@ export default function App() {
 
               const toolCallsSnapshot = Object.keys(currentToolCalls).length > 0 ? { ...currentToolCalls } : undefined;
 
-              // Update session's assistant message and user message status (to 'delivered')
               setSessions((prevSessions) => {
                 const next = prevSessions.map((s) => {
                   if (s.id === sessionToUse.id) {
@@ -497,15 +434,14 @@ export default function App() {
         }
       }
 
-      // Stream completed successfully, mark user message as 'read'
       setSessions((prevSessions) => {
         const next = prevSessions.map((s) => {
           if (s.id === sessionToUse.id) {
             return {
               ...s,
-              messages: s.messages.map((m) => 
-                m.id === userMessage.id 
-                  ? { ...m, status: 'read' as const } 
+              messages: s.messages.map((m) =>
+                m.id === userMessage.id
+                  ? { ...m, status: 'read' as const }
                   : m
               ),
             };
@@ -517,20 +453,19 @@ export default function App() {
       });
     } catch (error: any) {
       console.error('Streaming error:', error);
-      
-      // Update assistant message with error state
+
       setSessions((prevSessions) => {
         const next = prevSessions.map((s) => {
           if (s.id === sessionToUse.id) {
             return {
               ...s,
-              messages: s.messages.map((m) => 
-                m.id === assistantMessageId 
-                  ? { 
-                      ...m, 
-                      content: error.message || 'Đã có lỗi xảy ra trong quá trình truyền dữ liệu từ OpenAI API. Vui lòng kiểm tra lại cấu hình API Key.', 
-                      error: true 
-                    } 
+              messages: s.messages.map((m) =>
+                m.id === assistantMessageId
+                  ? {
+                      ...m,
+                      content: error.message || 'Đã có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại.',
+                      error: true
+                    }
                   : m
               ),
             };
@@ -565,7 +500,6 @@ export default function App() {
 
   return (
     <main className="flex w-screen h-screen overflow-hidden bg-white font-sans antialiased text-slate-900" id="main-layout">
-      {/* Sidebar Navigation */}
       <Sidebar
         sessions={sessions}
         activeSessionId={activeSessionId}
@@ -574,10 +508,6 @@ export default function App() {
         onDeleteSession={handleDeleteSession}
         onRenameSession={handleRenameSession}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        hasSystemKey={hasSystemKey}
-        customApiKey={customApiKey}
-        selectedModelId={selectedModelId}
-        onSelectModel={handleSelectModel}
         isMobileOpen={isMobileSidebarOpen}
         onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         documents={documents}
@@ -593,7 +523,6 @@ export default function App() {
         onOpenCommunity={() => setActiveView('community')}
       />
 
-      {/* Main Content Area — toggles between Chat and Community */}
       {activeView === 'community' ? (
         <CommunityPanel onBack={() => setActiveView('chat')} />
       ) : (
@@ -602,21 +531,14 @@ export default function App() {
           onSendMessage={handleSendMessage}
           isStreaming={isStreaming}
           onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-          hasSystemKey={hasSystemKey}
-          customApiKey={customApiKey}
-          onOpenSettings={() => setIsSettingsOpen(true)}
         />
       )}
 
-      {/* Corporate Advanced Settings Panel Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         config={config}
         onSaveConfig={handleSaveConfig}
-        customApiKey={customApiKey}
-        onSaveApiKey={handleSaveApiKey}
-        hasSystemKey={hasSystemKey}
       />
     </main>
   );

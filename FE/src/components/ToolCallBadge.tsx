@@ -9,14 +9,12 @@ interface ToolCallBadgeProps {
 export const ToolCallBadge: React.FC<ToolCallBadgeProps> = ({ toolCall }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Friendly human-readable tool name mapping
   const formatToolName = (name?: string) => {
     if (!name) return 'Đang khởi chạy công cụ...';
     if (name === 'query_knowledge_graph') return 'Truy vấn Neo4j Knowledge Graph';
     return name;
   };
 
-  // Helper to extract query text or formatted inputs
   const getQueryPreview = (): string => {
     if (toolCall.input) {
       if (typeof toolCall.input === 'string') return toolCall.input;
@@ -39,15 +37,22 @@ export const ToolCallBadge: React.FC<ToolCallBadgeProps> = ({ toolCall }) => {
 
   const queryPreview = getQueryPreview();
 
+  const statusConfig = {
+    completed: { label: 'Hoàn tất', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+    error: { label: 'Thất bại', color: 'text-rose-600 bg-rose-50 border-rose-100' },
+    calling: { label: 'Đang gọi', color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
+    executing: { label: 'Đang chạy', color: 'text-amber-600 bg-amber-50 border-amber-100' },
+  };
+
+  const status = statusConfig[toolCall.status] || statusConfig.calling;
+
   return (
-    <div className="my-2 border border-slate-200/80 rounded-xl bg-slate-50/70 overflow-hidden text-xs transition-all duration-200 shadow-sm max-w-full">
-      {/* Header Bar */}
+    <div className="my-2 border border-slate-200 rounded-xl bg-white overflow-hidden text-xs transition-all duration-200 shadow-sm max-w-full">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 text-left text-slate-700 hover:bg-slate-100/70 transition-colors focus:outline-none"
+        className="w-full flex items-center justify-between px-3 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none cursor-pointer"
       >
         <div className="flex items-center gap-2 min-w-0 pr-2">
-          {/* Status Icon */}
           {toolCall.status === 'completed' ? (
             <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
           ) : toolCall.status === 'error' ? (
@@ -56,42 +61,35 @@ export const ToolCallBadge: React.FC<ToolCallBadgeProps> = ({ toolCall }) => {
             <Loader2 className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
           )}
 
-          {/* Tool Icon & Title */}
           <div className="flex items-center gap-1.5 min-w-0">
             <Database className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-            <span className="font-medium text-slate-800 truncate">
+            <span className="font-semibold text-slate-800 truncate">
               {formatToolName(toolCall.name)}
             </span>
           </div>
 
-          {/* Inline query preview string */}
           {queryPreview && (
-            <span className="text-slate-400 font-mono truncate text-[11px] max-w-[200px] sm:max-w-[320px]">
+            <span className="text-slate-400 font-mono truncate text-[10px] max-w-[180px] sm:max-w-[300px]">
               &quot;{queryPreview}&quot;
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-1 text-slate-400 shrink-0">
-          <span className="text-[10px] font-medium uppercase tracking-wider">
-            {toolCall.status === 'completed'
-              ? 'Hoàn tất'
-              : toolCall.status === 'error'
-              ? 'Thất bại'
-              : 'Đang chạy'}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider font-mono border ${status.color}`}>
+            {status.label.toUpperCase()}
           </span>
-          {isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
         </div>
       </button>
 
-      {/* Collapsible Details Body */}
       {isOpen && (
-        <div className="px-3 py-2 border-t border-slate-200/60 bg-white/80 font-mono text-[11px] text-slate-600 space-y-1.5">
-          <div className="flex justify-between items-center text-slate-400 text-[10px] uppercase font-sans">
-            <span>Tham số đầu vào (Input):</span>
-            <span>Tool ID: {toolCall.id || toolCall.name || 'N/A'}</span>
+        <div className="px-3 py-2.5 border-t border-slate-100 bg-slate-50/50 font-mono text-[11px] text-slate-600 space-y-1.5">
+          <div className="flex justify-between items-center text-slate-400 text-[10px] uppercase font-sans font-bold tracking-wider">
+            <span>Tham số đầu vào</span>
+            <span className="font-mono normal-case">{toolCall.id || toolCall.name || 'N/A'}</span>
           </div>
-          <pre className="p-2 bg-slate-900 text-slate-200 rounded-lg overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
+          <pre className="p-2.5 bg-slate-900 text-slate-200 rounded-lg overflow-x-auto whitespace-pre-wrap break-all leading-relaxed text-[10px]">
             {toolCall.input
               ? JSON.stringify(toolCall.input, null, 2)
               : toolCall.args || '(Đang nhận tham số stream...)'}

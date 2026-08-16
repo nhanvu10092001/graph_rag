@@ -8,7 +8,6 @@ from typing import List, Dict, Any, Optional
 from app.database import SessionLocal
 from app.models import Document, Group
 from app.services.file_storage import get_file_from_minio, delete_file_from_minio
-from app.parser import extract_text
 from app.agent import graph_indexing_service
 
 logger = logging.getLogger("BE.services.document_service")
@@ -83,14 +82,11 @@ async def index_document_background(doc_id: int, minio_key: str, filename: str):
         
         # 2. Fetch content from MinIO
         file_bytes = get_file_from_minio(minio_key)
-        
-        # 3. Extract text content
-        text = extract_text(filename, file_bytes)
-        
-        # 4. Ingest text into Graph RAG
+
+        # 3. Extract text and ingest into Graph RAG
         logger.info(f"Indexing document {doc_id} ('{filename}') via GraphIndexingService...")
         loop = asyncio.get_running_loop()
-        res = await loop.run_in_executor(None, lambda: graph_indexing_service.index_text(text, source_doc=filename))
+        res = await loop.run_in_executor(None, lambda: graph_indexing_service.index_document(file_bytes, filename))
         
         # 5. Extract statistics
         entity_count = res.get("indexed_entities", 0)

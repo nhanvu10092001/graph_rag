@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 scripts/batch_index_dataset.py --max-docs 3 --chunk-size 1500 --no-postgres --dry-run)"
+    ]
+  }
+}

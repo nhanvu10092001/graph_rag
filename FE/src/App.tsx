@@ -371,28 +371,66 @@ export default function App() {
                   status: existing.status === 'completed' ? 'completed' : 'calling',
                 };
               } else if (msgType === 'tool_call_executing') {
-                let targetIndex = 0;
+                let targetIndex: number | null = null;
                 for (const [k, v] of Object.entries(currentToolCalls)) {
-                  if (v.name === parsed.name || v.id === parsed.id) {
-                    targetIndex = Number(k);
+                  const idx = Number(k);
+                  if ((v as any).runId === parsed.id || v.id === parsed.id) {
+                    targetIndex = idx;
                     break;
                   }
                 }
+                if (targetIndex === null) {
+                  for (const [k, v] of Object.entries(currentToolCalls)) {
+                    const idx = Number(k);
+                    if (v.name === parsed.name && v.status !== 'completed') {
+                      targetIndex = idx;
+                      break;
+                    }
+                  }
+                }
+                if (targetIndex === null) {
+                  const keys = Object.keys(currentToolCalls).map(Number);
+                  targetIndex = keys.length > 0 ? Math.max(...keys) + 1 : 0;
+                }
+
                 const existing = currentToolCalls[targetIndex] || { args: '', status: 'executing' };
                 currentToolCalls[targetIndex] = {
                   ...existing,
-                  id: parsed.id || existing.id,
+                  id: existing.id || parsed.id,
+                  ...(parsed.id ? { runId: parsed.id } : {}),
                   name: parsed.name || existing.name,
                   input: parsed.input || existing.input,
                   status: 'executing',
                 };
               } else if (msgType === 'tool_call_end') {
-                let targetIndex = 0;
+                let targetIndex: number | null = null;
                 for (const [k, v] of Object.entries(currentToolCalls)) {
-                  if (v.name === parsed.name || v.id === parsed.id) {
-                    targetIndex = Number(k);
+                  const idx = Number(k);
+                  if ((v as any).runId === parsed.id || v.id === parsed.id) {
+                    targetIndex = idx;
                     break;
                   }
+                }
+                if (targetIndex === null) {
+                  for (const [k, v] of Object.entries(currentToolCalls)) {
+                    const idx = Number(k);
+                    if (v.name === parsed.name && v.status === 'executing') {
+                      targetIndex = idx;
+                      break;
+                    }
+                  }
+                }
+                if (targetIndex === null) {
+                  for (const [k, v] of Object.entries(currentToolCalls)) {
+                    const idx = Number(k);
+                    if (v.name === parsed.name && v.status !== 'completed') {
+                      targetIndex = idx;
+                      break;
+                    }
+                  }
+                }
+                if (targetIndex === null) {
+                  targetIndex = 0;
                 }
                 const existing = currentToolCalls[targetIndex] || { args: '', status: 'completed' };
                 currentToolCalls[targetIndex] = {
@@ -434,16 +472,32 @@ export default function App() {
         }
       }
 
+      // Mark any uncompleted tool calls as completed when stream ends
+      if (Object.keys(currentToolCalls).length > 0) {
+        for (const k of Object.keys(currentToolCalls)) {
+          const idx = Number(k);
+          if (currentToolCalls[idx] && currentToolCalls[idx].status !== 'completed') {
+            currentToolCalls[idx].status = 'completed';
+          }
+        }
+      }
+
+      const finalToolCallsSnapshot = Object.keys(currentToolCalls).length > 0 ? { ...currentToolCalls } : undefined;
+
       setSessions((prevSessions) => {
         const next = prevSessions.map((s) => {
           if (s.id === sessionToUse.id) {
             return {
               ...s,
-              messages: s.messages.map((m) =>
-                m.id === userMessage.id
-                  ? { ...m, status: 'read' as const }
-                  : m
-              ),
+              messages: s.messages.map((m) => {
+                if (m.id === userMessage.id) {
+                  return { ...m, status: 'read' as const };
+                }
+                if (m.id === assistantMessageId && finalToolCallsSnapshot) {
+                  return { ...m, toolCalls: finalToolCallsSnapshot };
+                }
+                return m;
+              }),
             };
           }
           return s;

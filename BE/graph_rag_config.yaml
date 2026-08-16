@@ -14,19 +14,21 @@ llm:
     base_url: "http://localhost:8080/v1"
     api_key: "test"
   claude:
-    model: "claude-haiku-4-5-20251001"
+    model: "claude-haiku-1"
     temperature: 0.7
     base_url: "http://localhost:8080"
     api_key: "test"
-    max_tokens: 4096
+    max_tokens: 20000
 
 # Embeddings Model Configuration for entity description vectors
 embeddings:
   provider: "openai"
   openai:
     model: "nomic-ai/nomic-embed-text-v1.5"
-    base_url: "http://localhost:8081/v1"
+    base_url: "http://localhost:8082/v1"
     api_key: "test"
+    check_embedding_ctx_length: false
+    tiktoken_enabled: false
 
 # Reranking Configuration
 # Supported providers:
@@ -96,19 +98,24 @@ chunking:
 # -----------------------------------------------------------------------------
 extraction:
   pdf:
+    extractor: "full"          # "pymupdf" | "full" | "ocr"
     enable_ocr: true
     min_chars: 50
     
   ocr:
     enabled: true
-    provider: "tesseract" # "tesseract" | "paddle" | "docling" | "deepseek"
-    
+    provider: "paddle" # "tesseract" | "paddle" | "docling" | "deepseek"
+    fallback_chain: ["paddle", "paddle", "deepseek"]
+
     tesseract:
       lang: "vie+eng"
+      render_scale: 4.0
       tesseract_cmd: ""
       config_options: ""
       
     paddle:
+      api_url: "http://localhost:8082/v1/chat/completions"
+      model: "mlx-community/PaddleOCR-VL-1.5-bf16"
       lang: "vi"
       use_angle_cls: true
       use_gpu: false
@@ -143,11 +150,23 @@ community_detection:
 # Query Configuration
 # -----------------------------------------------------------------------------
 query:
-  search_mode: "auto"          # "auto" | "local" | "global"
-  # auto: LLM classifies whether query needs local (entity-focused) or global (corpus-wide) search
+  search_mode: "auto"          # "auto" | "local" | "global" | "ark"
+  # auto: LLM classifies whether query needs local (entity-focused), global (corpus-wide), or ark (multi-hop relational) search
   # local: Vector search + graph traversal for specific entity queries
   # global: Map-reduce over community summaries for big-picture questions
+  # ark: Adaptive Retriever of Knowledge (multi-agent trajectory traversal via text search and 1-hop expansion)
 
   global_search:
     max_communities: 10        # Max communities to include in map phase
     default_level: 0           # Default community hierarchy level for global search
+
+# -----------------------------------------------------------------------------
+# ARK (Adaptive Retriever of Knowledge) Configuration
+# -----------------------------------------------------------------------------
+ark:
+  enabled: true
+  n_agents: 3
+  t_max: 5
+  temperature: 0.7
+  top_k_fused: 10
+  fallback_to_local: true

@@ -166,7 +166,7 @@ query:
 ark:
   enabled: true
   n_agents: 3
-  t_max: 5
+  t_max: 30
   temperature: 0.7
   top_k_fused: 10
   fallback_to_local: true

@@ -7,17 +7,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Send, Bot, User, Loader2, Sparkles,
   Menu, Terminal, HelpCircle, FileText, ArrowDown,
-  Check, CheckCheck, Clock
+  Check, CheckCheck, Clock, Square
 } from 'lucide-react';
 import { ChatSession, Message } from '../types';
 import MarkdownRenderer from './MarkdownRenderer';
 import { ToolCallBadge } from './ToolCallBadge';
+import ThinkingPanel from './ThinkingPanel';
 
 interface ChatAreaProps {
   session: ChatSession | null;
   onSendMessage: (text: string) => void;
   isStreaming: boolean;
   onToggleMobile: () => void;
+  onStopGeneration?: () => void;
 }
 
 const STARTER_PROMPTS = [
@@ -52,6 +54,7 @@ export default function ChatArea({
   onSendMessage,
   isStreaming,
   onToggleMobile,
+  onStopGeneration,
 }: ChatAreaProps) {
   const [input, setInput] = useState('');
   const [showScrollBtn, setShowScrollBtn] = useState(false);
@@ -244,6 +247,7 @@ export default function ChatArea({
                               ))}
                             </div>
                           )}
+                          {message.thinking && <ThinkingPanel thinking={message.thinking} />}
                           {message.content && <MarkdownRenderer content={message.content} />}
                         </>
                       )}
@@ -318,13 +322,18 @@ export default function ChatArea({
 
               <button
                 type="button"
-                onClick={handleSend}
-                disabled={!input.trim() || isStreaming}
-                className="p-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-30 text-white font-medium rounded-xl transition cursor-pointer active:scale-[0.97] shadow-sm"
-                id="send-msg-btn"
+                onClick={isStreaming ? onStopGeneration : handleSend}
+                disabled={!isStreaming && !input.trim()}
+                className={`p-2 font-medium rounded-xl transition cursor-pointer active:scale-[0.97] shadow-sm ${
+                  isStreaming
+                    ? 'bg-red-500 hover:bg-red-600 text-white'
+                    : 'bg-indigo-600 hover:bg-indigo-700 disabled:opacity-30 text-white'
+                }`}
+                id={isStreaming ? "stop-msg-btn" : "send-msg-btn"}
+                title={isStreaming ? "Dừng tạo" : "Gửi tin nhắn"}
               >
                 {isStreaming ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Square className="w-4 h-4 fill-current" />
                 ) : (
                   <Send className="w-4 h-4" />
                 )}

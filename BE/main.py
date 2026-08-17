@@ -1,6 +1,7 @@
 """FastAPI bootstrapper script."""
 
 import logging
+import os
 import uvicorn
 from app.config import settings
 
@@ -14,5 +15,5 @@ if __name__ == "__main__":
         "app.main:app",
         host=settings.server_host,
         port=settings.server_port,
-        reload=True
+        reload=os.getenv("RELOAD", "false").lower() in ("true", "1", "yes")
     )

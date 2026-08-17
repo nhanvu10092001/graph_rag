@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.config import settings
+from app.schemas.config import ConfigStatusResponse, ModelListResponse, ModelInfo
 
 logger = logging.getLogger("BE.routers.config_router")
 
@@ -16,42 +17,29 @@ class VerifyKeyRequest(BaseModel):
     apiKey: Optional[str] = None
 
 
-@router.get("/api/config")
+@router.get("/api/config", response_model=ConfigStatusResponse)
 async def get_config():
-    """Endpoint checked by FE to verify environment configuration status."""
-    logger.info("Config status checked.")
-    return {
-        "hasSystemKey": True  # Since keys are preconfigured in config.yaml / .env
-    }
+    has_key = bool(
+        getattr(settings, "anthropic_api_key", None)
+        or getattr(settings, "openai_api_key", None)
+    )
+    return ConfigStatusResponse(hasSystemKey=has_key)
 
 
-@router.get("/v1/models")
-@router.get("/models")
+@router.get("/v1/models", response_model=ModelListResponse)
+@router.get("/models", response_model=ModelListResponse)
 async def list_models():
-    """OpenAI compatibility endpoint listing available models."""
-    logger.info("Listing available models.")
     current_model = settings.llm_model or "gpt-4o-mini"
-    available_models = list(set([current_model, "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "claude-3-5-sonnet-20241022"]))
-    return {
-        "object": "list",
-        "data": [
-            {
-                "id": model_id,
-                "object": "model",
-                "created": 1700000000,
-                "owned_by": "system"
-            }
-            for model_id in available_models
-        ]
-    }
+    model_ids = list(set([current_model, "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "claude-3-7-sonnet-20250219"]))
+    return ModelListResponse(
+        data=[ModelInfo(id=mid) for mid in model_ids]
+    )
 
 
 @router.post("/api/verify-key")
 async def verify_key(req: VerifyKeyRequest):
-    """Endpoint checked by FE settings to verify API key or server status."""
     logger.info("Verifying configuration and database connectivity...")
     try:
-        # Check settings validation
         settings.validate()
         return {"valid": True, "message": "Server configuration is valid and active!"}
     except Exception as e:

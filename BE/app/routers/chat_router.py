@@ -5,57 +5,36 @@ import logging
 from typing import Any, List, Optional
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
 from app.config import settings
-from app.agent import compiled_graph
+from app.agent.graph import get_compiled_graph
+from app.schemas.chat import Message, ChatStreamRequest
 
 logger = logging.getLogger("BE.routers.chat_router")
 
 router = APIRouter()
 
+_INTERNAL_KEYS = frozenset(("state", "config", "store", "callbacks", "run_manager", "runtime", "messages"))
+
+
+def _default_serializer(o: Any) -> Any:
+    if hasattr(o, "content"):
+        return getattr(o, "content")
+    if hasattr(o, "dict") and callable(getattr(o, "dict")):
+        return o.dict()
+    if hasattr(o, "__dict__"):
+        return o.__dict__
+    return str(o)
+
 
 def safe_json_dumps(obj: Any) -> str:
-    """Safely dump objects to JSON strings, handling LangChain messages and custom types."""
-    def default_serializer(o):
-        if hasattr(o, "content"):
-            return getattr(o, "content")
-        if hasattr(o, "dict") and callable(getattr(o, "dict")):
-            return o.dict()
-        if hasattr(o, "__dict__"):
-            return o.__dict__
-        return str(o)
-
-    return json.dumps(obj, default=default_serializer)
+    return json.dumps(obj, default=_default_serializer)
 
 
 def sanitize_tool_input(tool_input: Any) -> Any:
-    """Sanitizes tool input by removing internal framework parameters (e.g. state, config, messages)."""
     if isinstance(tool_input, dict):
-        cleaned = {}
-        for k, v in tool_input.items():
-            # Exclude internal injected state/config/messages parameters
-            if k in ("state", "config", "store", "callbacks", "run_manager", "runtime", "messages"):
-                continue
-            if isinstance(v, dict):
-                cleaned[k] = sanitize_tool_input(v)
-            else:
-                cleaned[k] = v
-        return cleaned
+        return {k: sanitize_tool_input(v) if isinstance(v, dict) else v for k, v in tool_input.items() if k not in _INTERNAL_KEYS}
     return tool_input
-
-
-class Message(BaseModel):
-    role: str  # "user" or "model"
-    content: str
-
-
-class ChatStreamRequest(BaseModel):
-    messages: List[Message]
-    model: Optional[str] = None
-    config: Optional[dict] = None
-    apiKey: Optional[str] = None
-    groupId: Optional[int] = None
 
 
 async def event_generator(messages: List[Message], group_id: Optional[int] = None):
@@ -74,7 +53,7 @@ async def event_generator(messages: List[Message], group_id: Optional[int] = Non
 
     try:
         # Stream events token-by-token using LangChain astream_events
-        async for event in compiled_graph.astream_events(
+        async for event in get_compiled_graph().astream_events(
             {"messages": formatted_messages},
             config={"configurable": {"group_id": group_id}},
             version="v2"
@@ -113,21 +92,35 @@ async def event_generator(messages: List[Message], group_id: Optional[int] = Non
                         # 2. Stream standard response text content tokens
                         raw_content = getattr(chunk, "content", None)
                         extracted_text = ""
+                        extracted_thinking = ""
                         if isinstance(raw_content, str):
                             extracted_text = raw_content
                         elif isinstance(raw_content, list):
                             text_parts = []
+                            thinking_parts = []
                             for part in raw_content:
                                 if isinstance(part, str):
                                     text_parts.append(part)
                                 elif isinstance(part, dict):
                                     if part.get("type") == "text" and part.get("text"):
                                         text_parts.append(part["text"])
+                                    elif part.get("type") == "thinking" and part.get("thinking"):
+                                        thinking_parts.append(part["thinking"])
                                     elif "text" in part and isinstance(part["text"], str):
                                         text_parts.append(part["text"])
                                 elif hasattr(part, "text") and getattr(part, "text"):
                                     text_parts.append(str(getattr(part, "text")))
                             extracted_text = "".join(text_parts)
+                            extracted_thinking = "".join(thinking_parts)
+
+                        # Extract OpenAI/DeepSeek reasoning content
+                        additional_kwargs = getattr(chunk, "additional_kwargs", {})
+                        reasoning_content = additional_kwargs.get("reasoning_content")
+                        if reasoning_content and isinstance(reasoning_content, str):
+                            extracted_thinking += reasoning_content
+
+                        if extracted_thinking:
+                            yield f"data: {safe_json_dumps({'type': 'thinking_delta', 'content': extracted_thinking})}\n\n"
 
                         if extracted_text:
                             # Provide 'text' key alongside 'content' for backward compatibility

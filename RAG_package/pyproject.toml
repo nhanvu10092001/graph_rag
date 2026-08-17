@@ -1,0 +1,60 @@
+[tool.uv.workspace]
+members = [
+    "packages/llm-utils-core",
+    "packages/llm-utils-llm",
+    "packages/llm-utils-rag", 
+    "packages/llm-utils-vector",
+    "packages/llm-utils-mcp",
+    "packages/llm-utils-subagent",
+    "packages/llm-utils-graph-rag",
+    "packages/llm-utils-parser",
+    "packages/llm-utils-reranker"
+]
+
+# Development dependencies for the entire workspace
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "chardet>=5.2.0",
+    "fastapi>=0.116.1",
+    "mypy>=1.17.1",
+    "ruff>=0.12.9",
+    "uvicorn>=0.35.0",
+]
+# MCP with all features for demo (includes MCPO)
+mcp-full = [
+    { include-group = "dev" },
+    "llm-utils-mcp[full]"
+]
+# RAG with all features for demo (includes all vector stores and LLM providers)
+rag = [
+    { include-group = "dev" },
+    "llm-utils-rag[all]",
+    "llm-utils-llm[all]",
+    "llm-utils-vector[all]",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.uv.sources]
+llm-utils-mcp = { workspace = true }
+llm-utils-rag = { workspace = true }
+llm-utils-llm = { workspace = true }
+llm-utils-vector = { workspace = true }
+llm-utils-core = { workspace = true }
+llm-utils-subagent = { workspace = true }
+llm-utils-graph-rag = { workspace = true }
+llm-utils-parser = { workspace = true }
+llm-utils-reranker = { workspace = true }
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true

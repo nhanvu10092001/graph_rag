@@ -17,6 +17,7 @@ export interface Message {
   id: string;
   role: Role;
   content: string;
+  thinking?: string;
   toolCalls?: Record<number, ToolCallState>;
   timestamp: number;
   modelUsed?: string;

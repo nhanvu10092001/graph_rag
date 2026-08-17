@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llm-utils-llm"
+version = "0.1.0"
+description = "LLM and Embeddings factories for LLM Utils"
+authors = [{name = "LLM Utils Team"}]
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "langchain-core==0.3.78",
+]
+
+[project.optional-dependencies]
+ollama = [
+    "langchain-ollama==0.3.10",
+]
+openai = [
+    "langchain-openai==0.3.30",
+]
+all = [
+    "langchain-ollama==0.3.10",
+    "langchain-openai==0.3.30",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/llm_utils_llm"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.md",
+]

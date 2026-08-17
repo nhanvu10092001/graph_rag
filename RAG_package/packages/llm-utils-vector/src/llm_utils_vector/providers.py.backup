@@ -1,0 +1,262 @@
+"""Provider classes for vector store implementations."""
+
+from abc import ABC, abstractmethod
+from typing import Any
+
+from langchain_core.embeddings import Embeddings
+from langchain_core.vectorstores import VectorStore
+
+from .config import QdrantConfig, PGVectorConfig
+from .exceptions import VectorStoreConnectionError, VectorStoreProviderError
+
+
+class VectorStoreProvider(ABC):
+    """Base class for vector store providers."""
+
+    def __init__(self, config: Any):
+        self.config = config
+        self.config.validate()
+
+    @abstractmethod
+    def create_vectorstore(
+        self, embeddings: Embeddings, collection_name: str, **kwargs
+    ) -> VectorStore:
+        """Create a new vector store instance."""
+        pass
+
+    @abstractmethod
+    def get_existing_vectorstore(
+        self, embeddings: Embeddings, collection_name: str, **kwargs
+    ) -> VectorStore:
+        """Get an existing vector store instance."""
+        pass
+
+
+class QdrantProviderSync(VectorStoreProvider):
+    """Synchronous Qdrant provider."""
+
+    def __init__(self, config: QdrantConfig):
+        super().__init__(config)
+        self._client = None
+
+    def _get_client(self):
+        """Get or create Qdrant client."""
+        if self._client is None:
+            try:
+                from qdrant_client import QdrantClient
+
+                self._client = QdrantClient(
+                    host=self.config.host,
+                    port=self.config.port,
+                    api_key=self.config.api_key,
+                    https=self.config.https,
+                )
+            except ImportError as e:
+                raise VectorStoreProviderError(
+                    "Qdrant dependencies not installed. Install with: pip install qdrant-client langchain-qdrant"
+                ) from e
+            except Exception as e:
+                raise VectorStoreConnectionError(
+                    f"Failed to connect to Qdrant at {self.config.host}:{self.config.port}: {str(e)}"
+                ) from e
+
+        return self._client
+
+    def create_vectorstore(
+        self, embeddings: Embeddings, collection_name: str, **kwargs
+    ) -> VectorStore:
+        """Create a new Qdrant vector store."""
+        try:
+            from langchain_qdrant import QdrantVectorStore
+
+            return QdrantVectorStore(
+                client=self._get_client(),
+                embeddings=embeddings,
+                collection_name=collection_name,
+                **kwargs,
+            )
+        except ImportError as e:
+            raise VectorStoreProviderError(
+                "Qdrant dependencies not installed. Install with: pip install qdrant-client langchain-qdrant"
+            ) from e
+        except Exception as e:
+            raise VectorStoreProviderError(
+                f"Failed to create Qdrant vector store: {str(e)}"
+            ) from e
+
+    def get_existing_vectorstore(
+        self, embeddings: Embeddings, collection_name: str, **kwargs
+    ) -> VectorStore:
+        """Get existing Qdrant vector store."""
+        # For Qdrant, getting existing is same as creating (it connects to existing collection)
+        return self.create_vectorstore(embeddings, collection_name, **kwargs)
+
+
+class QdrantProviderAsync(VectorStoreProvider):
+    """Asynchronous Qdrant provider."""
+
+    def __init__(self, config: QdrantConfig):
+        super().__init__(config)
+        self._client = None
+
+    def _get_client(self):
+        """Get or create Qdrant client."""
+        if self._client is None:
+            try:
+                from qdrant_client import QdrantClient
+
+                self._client = QdrantClient(
+                    host=self.config.host,
+                    port=self.config.port,
+                    api_key=self.config.api_key,
+                    https=self.config.https,
+                )
+            except ImportError as e:
+                raise VectorStoreProviderError(
+                    "Qdrant dependencies not installed. Install with: pip install qdrant-client langchain-qdrant"
+                ) from e
+            except Exception as e:
+                raise VectorStoreConnectionError(
+                    f"Failed to connect to Qdrant at {self.config.host}:{self.config.port}: {str(e)}"
+                ) from e
+
+        return self._client
+
+    def create_vectorstore(
+        self, embeddings: Embeddings, collection_name: str, **kwargs
+    ) -> VectorStore:
+        """Create a new Qdrant vector store."""
+        try:
+            from langchain_qdrant import QdrantVectorStore
+
+            return QdrantVectorStore(
+                client=self._get_client(),
+                embeddings=embeddings,
+                collection_name=collection_name,
+                **kwargs,
+            )
+        except ImportError as e:
+            raise VectorStoreProviderError(
+                "Qdrant dependencies not installed. Install with: pip install qdrant-client langchain-qdrant"
+            ) from e
+        except Exception as e:
+            raise VectorStoreProviderError(
+                f"Failed to create Qdrant vector store: {str(e)}"
+            ) from e
+
+    def get_existing_vectorstore(
+        self, embeddings: Embeddings, collection_name: str, **kwargs
+    ) -> VectorStore:
+        """Get existing Qdrant vector store."""
+        # For Qdrant, getting existing is same as creating (it connects to existing collection)
+        return self.create_vectorstore(embeddings, collection_name, **kwargs)
+
+
+class PGVectorProviderSync(VectorStoreProvider):
+    """Synchronous PGVector provider."""
+
+    def __init__(self, config: PGVectorConfig):
+        super().__init__(config)
+        self._engine = None
+
+    def _get_engine(self):
+        """Get or create sync SQLAlchemy engine."""
+        if self._engine is None:
+            try:
+                from sqlalchemy import create_engine
+
+                connection_string = self.config.get_connection_string(is_async=False)
+                self._engine = create_engine(connection_string)
+            except ImportError as e:
+                raise VectorStoreProviderError(
+                    "PGVector dependencies not installed. Install with: pip install langchain-postgres psycopg[binary]"
+                ) from e
+            except Exception as e:
+                raise VectorStoreConnectionError(
+                    f"Failed to connect to PGVector at {self.config.host}:{self.config.port}: {str(e)}"
+                ) from e
+
+        return self._engine
+
+    def create_vectorstore(
+        self, embeddings: Embeddings, collection_name: str, **kwargs
+    ) -> VectorStore:
+        """Create a new PGVector store."""
+        try:
+            from langchain_postgres import PGVector
+
+            return PGVector(
+                embeddings=embeddings,
+                connection=self._get_engine(),
+                collection_name=collection_name,
+                **kwargs,
+            )
+        except ImportError as e:
+            raise VectorStoreProviderError(
+                "PGVector dependencies not installed. Install with: pip install langchain-postgres psycopg[binary]"
+            ) from e
+        except Exception as e:
+            raise VectorStoreProviderError(
+                f"Failed to create PGVector store: {str(e)}"
+            ) from e
+
+    def get_existing_vectorstore(
+        self, embeddings: Embeddings, collection_name: str, **kwargs
+    ) -> VectorStore:
+        """Get existing PGVector store."""
+        return self.create_vectorstore(embeddings, collection_name, **kwargs)
+
+
+class PGVectorProviderAsync(VectorStoreProvider):
+    """Asynchronous PGVector provider."""
+
+    def __init__(self, config: PGVectorConfig):
+        super().__init__(config)
+        self._engine = None
+
+    def _get_engine(self):
+        """Get or create async SQLAlchemy engine."""
+        if self._engine is None:
+            try:
+                from sqlalchemy.ext.asyncio import create_async_engine
+
+                connection_string = self.config.get_connection_string(is_async=True)
+                self._engine = create_async_engine(connection_string)
+            except ImportError as e:
+                raise VectorStoreProviderError(
+                    "PGVector dependencies not installed. Install with: pip install langchain-postgres psycopg[binary]"
+                ) from e
+            except Exception as e:
+                raise VectorStoreConnectionError(
+                    f"Failed to connect to PGVector at {self.config.host}:{self.config.port}: {str(e)}"
+                ) from e
+
+        return self._engine
+
+    def create_vectorstore(
+        self, embeddings: Embeddings, collection_name: str, **kwargs
+    ) -> VectorStore:
+        """Create a new PGVector store."""
+        try:
+            from langchain_postgres import PGVector
+
+            return PGVector(
+                embeddings=embeddings,
+                connection=self._get_engine(),
+                collection_name=collection_name,
+                **kwargs,
+            )
+        except ImportError as e:
+            raise VectorStoreProviderError(
+                "PGVector dependencies not installed. Install with: pip install langchain-postgres psycopg[binary]"
+            ) from e
+        except Exception as e:
+            raise VectorStoreProviderError(
+                f"Failed to create PGVector store: {str(e)}"
+            ) from e
+
+    def get_existing_vectorstore(
+        self, embeddings: Embeddings, collection_name: str, **kwargs
+    ) -> VectorStore:
+        """Get existing PGVector store."""
+        return self.create_vectorstore(embeddings, collection_name, **kwargs)

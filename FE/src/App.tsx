@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import CommunityPanel from './components/CommunityPanel';
@@ -38,6 +38,8 @@ export default function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [groups, setGroups] = useState<any[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchDocuments = async () => {
     try {
@@ -128,7 +130,8 @@ export default function App() {
       if (res.ok) {
         await fetchDocuments();
       } else {
-        alert('Tải tài liệu lên thất bại!');
+        const err = await res.json().catch(() => ({}));
+        alert(`Tải tài liệu lên thất bại: ${err.detail || 'Lỗi không xác định'}`);
       }
     } catch (e) {
       console.error('Error uploading document:', e);
@@ -275,6 +278,9 @@ export default function App() {
     saveSessionsToLocal(initialSessionsState);
     setIsStreaming(true);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const response = await fetch(`${API_BASE}/api/chat/stream`, {
         method: 'POST',
@@ -291,6 +297,7 @@ export default function App() {
           },
           groupId: selectedGroupId,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -323,6 +330,7 @@ export default function App() {
       });
 
       let accumulatedText = '';
+      let accumulatedThinking = '';
       const currentToolCalls: Record<number, ToolCallState> = {};
       let buffer = '';
 
@@ -360,6 +368,9 @@ export default function App() {
               if (msgType === 'text_delta') {
                 const chunkText = parsed.content || parsed.text || '';
                 accumulatedText += chunkText;
+              } else if (msgType === 'thinking_delta') {
+                const chunkThinking = parsed.content || '';
+                accumulatedThinking += chunkThinking;
               } else if (msgType === 'tool_call_delta') {
                 const index = parsed.index ?? 0;
                 const existing = currentToolCalls[index] || { args: '', status: 'calling' };
@@ -451,6 +462,7 @@ export default function App() {
                           return {
                             ...m,
                             content: accumulatedText,
+                            ...(accumulatedThinking ? { thinking: accumulatedThinking } : {}),
                             ...(toolCallsSnapshot ? { toolCalls: toolCallsSnapshot } : {})
                           };
                         }
@@ -506,6 +518,12 @@ export default function App() {
         return next;
       });
     } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('Stream aborted by user');
+        setIsStreaming(false);
+        return;
+      }
+
       console.error('Streaming error:', error);
 
       setSessions((prevSessions) => {
@@ -534,6 +552,14 @@ export default function App() {
     }
   };
 
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+  };
+
   const handleDeleteDocument = async (id: number) => {
     try {
       const res = await fetch(`${API_BASE}/api/documents/${id}`, {
@@ -542,7 +568,8 @@ export default function App() {
       if (res.ok) {
         await fetchDocuments();
       } else {
-        alert('Xoá tài liệu thất bại!');
+        const err = await res.json().catch(() => ({}));
+        alert(`Xoá tài liệu thất bại: ${err.detail || 'Lỗi không xác định'}`);
       }
     } catch (e) {
       console.error('Error deleting document:', e);
@@ -585,6 +612,7 @@ export default function App() {
           onSendMessage={handleSendMessage}
           isStreaming={isStreaming}
           onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          onStopGeneration={handleStopGeneration}
         />
       )}
 

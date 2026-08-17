@@ -1,0 +1,6 @@
+-e ./packages/llm-utils-core
+-e ./packages/llm-utils-llm
+-e ./packages/llm-utils-mcp
+-e ./packages/llm-utils-vector
+-e ./packages/llm-utils-rag
+-e ./packages/llm-utils-subagent

@@ -170,3 +170,13 @@ ark:
   temperature: 0.7
   top_k_fused: 10
   fallback_to_local: true
+
+# -----------------------------------------------------------------------------
+# Sub-agents Configuration for Multi-Agent Delegation
+# -----------------------------------------------------------------------------
+subagents:
+  enabled: true
+  agents:
+    - name: "graph_analyst"
+      description: "Chuyên gia phân tích sâu tri thức từ Neo4j Knowledge Graph và tổng hợp báo cáo."
+      prompt: "Bạn là một sub-agent chuyên phân tích sâu các thực thể và mối quan hệ trong Knowledge Graph."

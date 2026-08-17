@@ -1,9 +1,9 @@
 """Prompt injection guardrail for the moderation pipeline."""
 
 import logging
-from typing import Annotated, Optional, Sequence, TypedDict
+from typing import Annotated, Any, Optional, Sequence, TypedDict, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 from langgraph.graph.message import add_messages
 
@@ -21,7 +21,20 @@ class SecurityGuardResult(BaseModel):
     is_safe: bool = Field(
         description="True if user input is safe. False if prompt injection, jailbreak, instruction override, or system leak attempt"
     )
-    reasoning: Optional[str] = Field(default="", description="Brief reasoning for decision")
+    reasoning: Optional[Union[str, dict, Any]] = Field(default="", description="Brief reasoning for decision")
+
+    @field_validator("reasoning", mode="before")
+    @classmethod
+    def parse_reasoning(cls, v: Any) -> str:
+        if isinstance(v, dict):
+            if "reason" in v:
+                return str(v["reason"])
+            if "reasoning" in v:
+                return str(v["reasoning"])
+            return str(v)
+        if v is None:
+            return ""
+        return str(v)
 
 
 async def check_prompt_injection(state: AgentState):

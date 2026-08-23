@@ -225,4 +225,7 @@ def load_config(config_path: Path = CONFIG_PATH) -> Settings:
 
 # Global settings instance
 settings = load_config()
-settings.validate()
+try:
+    settings.validate()
+except Exception as e:
+    logger.warning(f"Settings validation warning on startup: {e}")

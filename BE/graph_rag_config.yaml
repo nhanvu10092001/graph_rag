@@ -7,26 +7,26 @@ neo4j:
 
 # Language Model Configuration for Entity/Relationship extraction
 llm:
-  provider: "claude"  # "openai" | "claude"
+  provider: "openai"  # "openai" | "claude"
   openai:
-    model: "claude-haiku-2"
+    model: "gpt-4o-mini"
     temperature: 0.7
-    base_url: "http://localhost:8080/v1"
-    api_key: "test"
+    base_url: ""
+    api_key: ""
   claude:
-    model: "claude-haiku-1"
+    model: "claude-haiku-4-5-20251001"
     temperature: 0.7
-    base_url: "http://localhost:8080"
-    api_key: "test"
-    max_tokens: 20000
+    base_url: ""
+    api_key: ""
+    max_tokens: 4096
 
 # Embeddings Model Configuration for entity description vectors
 embeddings:
   provider: "openai"
   openai:
-    model: "nomic-ai/nomic-embed-text-v1.5"
-    base_url: "http://localhost:8082/v1"
-    api_key: "test"
+    model: "text-embedding-3-small"
+    base_url: ""
+    api_key: ""
     check_embedding_ctx_length: false
     tiktoken_enabled: false
 

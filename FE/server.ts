@@ -169,6 +169,12 @@ async function startServer() {
     }
   });
 
+  // 8. General fallback proxy for any other /api/* routes
+  app.use("/api", createProxyMiddleware({
+    target: BACKEND_URL,
+    changeOrigin: true,
+  }));
+
   // Vite middleware for dev or static asset serving for prod
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

@@ -77,7 +77,8 @@ class ArkRetriever(BaseRetriever):
         }
 
         try:
-            final_state = await graph.ainvoke(initial_state)
+            recursion_limit = max(100, self.max_steps * 3 + 10)
+            final_state = await graph.ainvoke(initial_state, config={"recursion_limit": recursion_limit})
             selected = final_state.get("selected_nodes", {})
             nodes = [
                 {

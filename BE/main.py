@@ -15,5 +15,5 @@ if __name__ == "__main__":
         "app.main:app",
         host=settings.server_host,
         port=settings.server_port,
-        reload=os.getenv("RELOAD", "false").lower() in ("true", "1", "yes")
+        reload=True
     )

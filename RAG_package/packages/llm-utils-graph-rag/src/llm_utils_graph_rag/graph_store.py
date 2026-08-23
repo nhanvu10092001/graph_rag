@@ -16,9 +16,9 @@ class Neo4jGraphStore:
         self._graph: Optional[Neo4jGraph] = None
         self._current_db: Optional[str] = None
 
-    def connect(self, database: Optional[str] = None) -> Neo4jGraph:
+    def connect(self) -> Neo4jGraph:
         """Establish connection to Neo4j database."""
-        db = database or self.config.database
+        db = self.config.database
         if self._graph is None or self._current_db != db:
             try:
                 logger.info(f"Connecting to Neo4j at {self.config.uri} (database: {db})")
@@ -30,7 +30,6 @@ class Neo4jGraphStore:
                 )
                 self._current_db = db
                 logger.info(f"Successfully connected to Neo4j database '{db}'.")
-                self.ensure_fulltext_index()
             except Exception as e:
                 logger.error(f"Failed to connect to Neo4j: {e}")
                 raise ConnectionError(f"Failed to connect to Neo4j at {self.config.uri}: {e}") from e
@@ -50,24 +49,24 @@ class Neo4jGraphStore:
         except Exception as e:
             logger.warning(f"Failed to create fulltext index: {e}")
 
-    def test_connection(self, database: Optional[str] = None) -> bool:
+    def test_connection(self) -> bool:
         """Test if connection to Neo4j works."""
         try:
-            graph = self.connect(database=database)
+            graph = self.connect()
             graph.query("RETURN 1 AS test_val")
             return True
         except Exception as e:
             logger.warning(f"Neo4j connection test failed: {e}")
             return False
 
-    def query(self, cypher: str, params: Optional[Dict[str, Any]] = None, database: Optional[str] = None) -> List[Dict[str, Any]]:
+    def query(self, cypher: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Run Cypher query and return dictionary list."""
-        graph = self.connect(database=database)
+        graph = self.connect()
         logger.debug(f"Running Cypher: {cypher} with params {params}")
         return graph.query(cypher, params or {})
 
-    def get_schema(self, database: Optional[str] = None) -> str:
+    def get_schema(self) -> str:
         """Return the schema of the graph database."""
-        graph = self.connect(database=database)
+        graph = self.connect()
         graph.refresh_schema()
         return graph.schema

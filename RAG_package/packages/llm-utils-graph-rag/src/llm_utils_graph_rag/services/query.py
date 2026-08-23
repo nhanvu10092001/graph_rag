@@ -30,11 +30,9 @@ class GraphQueryService:
         query: str,
         top_k_entities: int = 5,
         allowed_docs: Optional[List[str]] = None,
-        group_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Lookup nodes by vector similarity, apply reranking if configured, and fetch surrounding relationships."""
-        target_db = f"group_{group_id}" if group_id is not None else None
-        self.graph_store.connect(database=target_db)
+        self.graph_store.connect()
 
         # 1. Embed query
         query_vector = self.embeddings.embed_query(query)
@@ -43,12 +41,11 @@ class GraphQueryService:
         # If reranking is enabled, fetch a larger candidate pool
         top_k_search = max(top_k_entities * 3, 15) if self.reranker else top_k_entities
 
-        if allowed_docs is not None or group_id is not None:
+        if allowed_docs is not None:
             vector_search_cypher = """
             CALL db.index.vector.queryNodes('entity_embeddings', $top_k, $vector)
             YIELD node, score
-            WHERE ($group_id IS NULL OR $group_id IN COALESCE(node.group_ids, []))
-              AND ($allowed_docs IS NULL OR any(doc IN node.source_documents WHERE doc IN $allowed_docs))
+            WHERE any(doc IN node.source_documents WHERE doc IN $allowed_docs)
             RETURN node.id AS id, node.type AS type, node.description AS description, score
             """
         else:
@@ -62,21 +59,19 @@ class GraphQueryService:
             params = {
                 "top_k": top_k_search,
                 "vector": query_vector,
-                "group_id": group_id,
             }
             if allowed_docs is not None:
                 params["allowed_docs"] = allowed_docs
 
-            matched_nodes = self.graph_store.query(vector_search_cypher, params, database=target_db)
+            matched_nodes = self.graph_store.query(vector_search_cypher, params)
         except Exception as e:
             logger.warning(f"Neo4j vector search query failed: {e}. Falling back to name matching.")
             # Fallback to simple ILIKE search on node IDs if vector search is not configured yet
-            if allowed_docs is not None or group_id is not None:
+            if allowed_docs is not None:
                 fallback_cypher = """
                 MATCH (n:Entity)
                 WHERE (n.id CONTAINS toUpper($query) OR n.description CONTAINS $query)
-                  AND ($group_id IS NULL OR $group_id IN COALESCE(n.group_ids, []))
-                  AND ($allowed_docs IS NULL OR any(doc IN n.source_documents WHERE doc IN $allowed_docs))
+                  AND any(doc IN n.source_documents WHERE doc IN $allowed_docs)
                 RETURN n.id AS id, n.type AS type, n.description AS description, 1.0 AS score
                 LIMIT $top_k
                 """
@@ -91,11 +86,10 @@ class GraphQueryService:
                 fallback_params = {
                     "query": query,
                     "top_k": top_k_search,
-                    "group_id": group_id,
                 }
                 if allowed_docs is not None:
                     fallback_params["allowed_docs"] = allowed_docs
-                matched_nodes = self.graph_store.query(fallback_cypher, fallback_params, database=target_db)
+                matched_nodes = self.graph_store.query(fallback_cypher, fallback_params)
             except Exception as fe:
                 logger.error(f"Fallback graph retrieval failed: {fe}")
                 return {"entities": [], "relationships": [], "context_str": ""}
@@ -106,7 +100,7 @@ class GraphQueryService:
         # Apply reranking if configured
         if self.reranker and len(matched_nodes) > 1:
             from langchain_core.documents import Document
-            
+
             docs = []
             for node in matched_nodes:
                 content = f"{node['id']} ({node['type']}): {node['description']}"
@@ -119,9 +113,9 @@ class GraphQueryService:
                         "score": node.get("score", 1.0)
                     }
                 ))
-            
+
             reranked_docs = self.reranker.rerank_sync(query, docs, top_k=top_k_entities)
-            
+
             matched_nodes = []
             for doc in reranked_docs:
                 matched_nodes.append({
@@ -137,11 +131,10 @@ class GraphQueryService:
 
         for node in matched_nodes:
             node_id = node["id"]
-            if allowed_docs is not None or group_id is not None:
+            if allowed_docs is not None:
                 traversal_cypher = """
                 MATCH (n:Entity {id: $node_id})-[r]-(m:Entity)
-                WHERE ($group_id IS NULL OR $group_id IN COALESCE(r.group_ids, []))
-                  AND ($allowed_docs IS NULL OR any(doc IN r.source_documents WHERE doc IN $allowed_docs))
+                WHERE any(doc IN r.source_documents WHERE doc IN $allowed_docs)
                 RETURN n.id AS source, type(r) AS rel, m.id AS target, r.description AS description
                 LIMIT 15
                 """
@@ -152,10 +145,10 @@ class GraphQueryService:
                 LIMIT 15
                 """
             try:
-                traversal_params = {"node_id": node_id, "group_id": group_id}
+                traversal_params = {"node_id": node_id}
                 if allowed_docs is not None:
                     traversal_params["allowed_docs"] = allowed_docs
-                edges = self.graph_store.query(traversal_cypher, traversal_params, database=target_db)
+                edges = self.graph_store.query(traversal_cypher, traversal_params)
                 for edge in edges:
                     triplet = (edge["source"], edge["rel"], edge["target"])
                     # De-duplicate relationships
@@ -172,7 +165,7 @@ class GraphQueryService:
                 logger.error(f"Error traversing relationships for node {node_id}: {e}")
 
         # 4. Enrich with community context (if communities exist)
-        community_context = self._get_community_context_for_entities(matched_nodes, database=target_db, group_id=group_id)
+        community_context = self._get_community_context_for_entities(matched_nodes)
 
         # 5. Synthesize context string
         context_lines = ["Matched Entities:"]

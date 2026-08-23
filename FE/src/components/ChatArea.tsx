@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { ChatSession, Message } from '../types';
 import MarkdownRenderer from './MarkdownRenderer';
-import { ToolCallBadge } from './ToolCallBadge';
+import { ToolCallGroup } from './ToolCallGroup';
 import ThinkingPanel from './ThinkingPanel';
 
 interface ChatAreaProps {
@@ -245,10 +245,11 @@ export default function ChatArea({
                       ) : (
                         <>
                           {message.toolCalls && typeof message.toolCalls === 'object' && Object.keys(message.toolCalls).length > 0 && (
-                            <div className="mb-3 space-y-1">
-                              {(Array.isArray(message.toolCalls) ? message.toolCalls : Object.values(message.toolCalls)).map((tc, idx) => (
-                                tc ? <ToolCallBadge key={tc.id || idx} toolCall={tc} /> : null
-                              ))}
+                            <div className="mb-3">
+                              <ToolCallGroup
+                                toolCalls={message.toolCalls as Record<number, import('../types').ToolCallState>}
+                                isStreaming={isStreaming && message.id === session?.messages[session.messages.length - 1]?.id}
+                              />
                             </div>
                           )}
                           {message.thinking && <ThinkingPanel thinking={message.thinking} />}

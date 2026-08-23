@@ -43,8 +43,7 @@ class IndexingService:
         file_obj = context.get("context")
         if not is_supported_file(file_obj):
             raise ValueError(f"File type not supported: {getattr(file_obj, 'documents_name', 'unknown')}")
-        group_id = context.get("group_id")
-        default_coll = f"group_{group_id}" if group_id is not None else "documents"
+        default_coll = "documents"
         collection_name = getattr(file_obj, "collection_name", None) or context.get("collection_name") or default_coll
         filename = getattr(file_obj, "documents_name", "unknown") or "unknown"
         return file_obj, collection_name, filename
@@ -65,14 +64,12 @@ class IndexingService:
             "vector_store", {}
         ).get("provider", "qdrant")
 
-    def _apply_doc_metadata(self, texts: List[Document], filename: str, group_id: Optional[int] = None):
-        """Stamp each chunk with source filename and group_id metadata."""
+    def _apply_doc_metadata(self, texts: List[Document], filename: str):
+        """Stamp each chunk with source filename metadata."""
         for text in texts:
             if not text.metadata:
                 text.metadata = {}
             text.metadata["filename"] = filename
-            if group_id is not None:
-                text.metadata["group_id"] = group_id
 
     # ── Chunking ───────────────────────────────────────────────────────
 
@@ -137,10 +134,9 @@ class IndexingService:
         vector_provider = self._get_vector_provider(context)
         documents = [Document(page_content=content_string, metadata=metadata)]
 
-        group_id = context.get("group_id")
         with timer.stage("chunking"):
             texts = self._chunk_documents(documents, embeddings, llm=llm, filename=filename)
-            self._apply_doc_metadata(texts, filename, group_id=group_id)
+            self._apply_doc_metadata(texts, filename)
 
         with timer.stage("vectorstore_create"):
             vectorstore = VectorStoreFactory.create_vectorstore_with_config(
@@ -210,10 +206,9 @@ class IndexingService:
         vector_provider = self._get_vector_provider(context)
         documents = [Document(page_content=content_string, metadata=metadata)]
 
-        group_id = context.get("group_id")
         with timer.stage("chunking"):
             texts = await self._chunk_documents_async(documents, embeddings, llm=llm, filename=filename)
-            self._apply_doc_metadata(texts, filename, group_id=group_id)
+            self._apply_doc_metadata(texts, filename)
 
         with timer.stage("vectorstore_create"):
             vectorstore = await VectorStoreFactory.create_vectorstore_async_with_config(

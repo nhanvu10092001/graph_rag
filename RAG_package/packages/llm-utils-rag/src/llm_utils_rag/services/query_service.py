@@ -34,8 +34,7 @@ class QueryService:
         query = context.get("query")
         if not query:
             raise ValueError("query is required")
-        group_id = context.get("group_id")
-        default_coll = f"group_{group_id}" if group_id is not None else "documents"
+        default_coll = "documents"
         collection_name = context.get("collection_name") or default_coll
         return query, collection_name
 
@@ -49,9 +48,6 @@ class QueryService:
         fn = context.get("filename", None)
         if fn is not None:
             filter_dict["filename"] = fn
-        group_id = context.get("group_id", None)
-        if group_id is not None:
-            filter_dict["group_id"] = group_id
         return filter_dict
 
     def _build_retriever(self, context, vectorstore, llm):

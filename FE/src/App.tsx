@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import CommunityPanel from './components/CommunityPanel';
@@ -24,6 +24,15 @@ const DEFAULT_CONFIG: ModelConfig = {
 
 const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
+function getWsUrl(): string {
+  const loc = window.location;
+  const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+  if (loc.hostname === 'localhost' && loc.port !== '8000') {
+    return 'ws://localhost:8000/ws/chat';
+  }
+  return `${protocol}//${loc.host}/ws/chat`;
+}
+
 export default function App() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -37,7 +46,60 @@ export default function App() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const messageHandlerRef = useRef<((data: any) => void) | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const connectWebSocket = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
+      return;
+    }
+
+    const ws = new WebSocket(getWsUrl());
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      reconnectAttemptRef.current = 0;
+      console.log('WebSocket connected');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        messageHandlerRef.current?.(data);
+      } catch (e) {
+        console.error('Failed to parse WebSocket message:', e);
+      }
+    };
+
+    ws.onclose = (event) => {
+      wsRef.current = null;
+      if (!event.wasClean) {
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptRef.current), 30000);
+        reconnectAttemptRef.current++;
+        console.log(`WebSocket closed unexpectedly. Reconnecting in ${delay}ms...`);
+        reconnectTimerRef.current = setTimeout(connectWebSocket, delay);
+      }
+    };
+
+    ws.onerror = () => {
+      ws.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    connectWebSocket();
+    return () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.onclose = null;
+        wsRef.current.close();
+      }
+    };
+  }, [connectWebSocket]);
 
   const fetchDocuments = async () => {
     try {
@@ -217,48 +279,86 @@ export default function App() {
     saveSessionsToLocal(initialSessionsState);
     setIsStreaming(true);
 
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    try {
-      const response = await fetch(`${API_BASE}/api/chat/stream`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: updatedMessages,
-          config: {
-            systemInstruction: config.systemInstruction,
-            temperature: config.temperature,
-            topP: config.topP,
-            topK: config.topK,
-          },
-        }),
-        signal: controller.signal,
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      connectWebSocket();
+      await new Promise<void>((resolve, reject) => {
+        const checkInterval = setInterval(() => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100);
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          reject(new Error('WebSocket connection timeout'));
+        }, 5000);
+      }).catch((err) => {
+        setIsStreaming(false);
+        setSessions((prev) => {
+          const next = prev.map((s) => {
+            if (s.id === sessionToUse.id) {
+              return {
+                ...s,
+                messages: s.messages.map((m) =>
+                  m.id === assistantMessageId
+                    ? { ...m, content: err.message || 'Connection failed.', error: true }
+                    : m
+                ),
+              };
+            }
+            return s;
+          });
+          localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
+          return next;
+        });
+        return;
       });
+    }
 
-      if (!response.ok) {
-        throw new Error('Cannot connect to API server.');
-      }
+    setSessions((prevSessions) => {
+      const next = prevSessions.map((s) => {
+        if (s.id === sessionToUse.id) {
+          return {
+            ...s,
+            messages: s.messages.map((m) =>
+              m.id === userMessage.id
+                ? { ...m, status: 'sent' as const }
+                : m
+            ),
+          };
+        }
+        return s;
+      });
+      localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
+      return next;
+    });
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder('utf-8');
+    let accumulatedText = '';
+    let accumulatedThinking = '';
+    const currentToolCalls: Record<number, ToolCallState> = {};
 
-      if (!reader) {
-        throw new Error('Stream data not responding.');
-      }
+    const updateSessionMessages = () => {
+      const toolCallsSnapshot = Object.keys(currentToolCalls).length > 0 ? { ...currentToolCalls } : undefined;
 
       setSessions((prevSessions) => {
         const next = prevSessions.map((s) => {
           if (s.id === sessionToUse.id) {
             return {
               ...s,
-              messages: s.messages.map((m) =>
-                m.id === userMessage.id
-                  ? { ...m, status: 'sent' as const }
-                  : m
-              ),
+              messages: s.messages.map((m) => {
+                if (m.id === assistantMessageId) {
+                  return {
+                    ...m,
+                    content: accumulatedText,
+                    ...(accumulatedThinking ? { thinking: accumulatedThinking } : {}),
+                    ...(toolCallsSnapshot ? { toolCalls: toolCallsSnapshot } : {}),
+                  };
+                }
+                if (m.id === userMessage.id && m.status !== 'delivered' && m.status !== 'read') {
+                  return { ...m, status: 'delivered' as const };
+                }
+                return m;
+              }),
             };
           }
           return s;
@@ -266,163 +366,9 @@ export default function App() {
         localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
         return next;
       });
+    };
 
-      let accumulatedText = '';
-      let accumulatedThinking = '';
-      const currentToolCalls: Record<number, ToolCallState> = {};
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        let boundary = buffer.indexOf('\n\n');
-
-        while (boundary !== -1) {
-          const rawMessage = buffer.slice(0, boundary).trim();
-          buffer = buffer.slice(boundary + 2);
-
-          const lines = rawMessage.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const dataStr = line.slice(6).trim();
-              if (dataStr === '[DONE]') {
-                break;
-              }
-              let parsed: any = null;
-              try {
-                parsed = JSON.parse(dataStr);
-              } catch (e: any) {
-                continue;
-              }
-
-              if (parsed.error) {
-                throw new Error(parsed.error);
-              }
-
-              const msgType = parsed.type || (parsed.text !== undefined ? 'text_delta' : 'unknown');
-
-              if (msgType === 'text_delta') {
-                const chunkText = parsed.content || parsed.text || '';
-                accumulatedText += chunkText;
-              } else if (msgType === 'thinking_delta') {
-                const chunkThinking = parsed.content || '';
-                accumulatedThinking += chunkThinking;
-              } else if (msgType === 'tool_call_delta') {
-                const index = parsed.index ?? 0;
-                const existing = currentToolCalls[index] || { args: '', status: 'calling' };
-                currentToolCalls[index] = {
-                  ...existing,
-                  id: parsed.id || existing.id,
-                  name: parsed.name || existing.name,
-                  args: existing.args + (parsed.args || ''),
-                  status: existing.status === 'completed' ? 'completed' : 'calling',
-                };
-              } else if (msgType === 'tool_call_executing') {
-                let targetIndex: number | null = null;
-                for (const [k, v] of Object.entries(currentToolCalls)) {
-                  const idx = Number(k);
-                  if ((v as any).runId === parsed.id || v.id === parsed.id) {
-                    targetIndex = idx;
-                    break;
-                  }
-                }
-                if (targetIndex === null) {
-                  for (const [k, v] of Object.entries(currentToolCalls)) {
-                    const idx = Number(k);
-                    if (v.name === parsed.name && v.status !== 'completed') {
-                      targetIndex = idx;
-                      break;
-                    }
-                  }
-                }
-                if (targetIndex === null) {
-                  const keys = Object.keys(currentToolCalls).map(Number);
-                  targetIndex = keys.length > 0 ? Math.max(...keys) + 1 : 0;
-                }
-
-                const existing = currentToolCalls[targetIndex] || { args: '', status: 'executing' };
-                currentToolCalls[targetIndex] = {
-                  ...existing,
-                  id: existing.id || parsed.id,
-                  ...(parsed.id ? { runId: parsed.id } : {}),
-                  name: parsed.name || existing.name,
-                  input: parsed.input || existing.input,
-                  status: 'executing',
-                };
-              } else if (msgType === 'tool_call_end') {
-                let targetIndex: number | null = null;
-                for (const [k, v] of Object.entries(currentToolCalls)) {
-                  const idx = Number(k);
-                  if ((v as any).runId === parsed.id || v.id === parsed.id) {
-                    targetIndex = idx;
-                    break;
-                  }
-                }
-                if (targetIndex === null) {
-                  for (const [k, v] of Object.entries(currentToolCalls)) {
-                    const idx = Number(k);
-                    if (v.name === parsed.name && v.status === 'executing') {
-                      targetIndex = idx;
-                      break;
-                    }
-                  }
-                }
-                if (targetIndex === null) {
-                  for (const [k, v] of Object.entries(currentToolCalls)) {
-                    const idx = Number(k);
-                    if (v.name === parsed.name && v.status !== 'completed') {
-                      targetIndex = idx;
-                      break;
-                    }
-                  }
-                }
-                if (targetIndex === null) {
-                  targetIndex = 0;
-                }
-                const existing = currentToolCalls[targetIndex] || { args: '', status: 'completed' };
-                currentToolCalls[targetIndex] = {
-                  ...existing,
-                  status: 'completed',
-                };
-              }
-
-              const toolCallsSnapshot = Object.keys(currentToolCalls).length > 0 ? { ...currentToolCalls } : undefined;
-
-              setSessions((prevSessions) => {
-                const next = prevSessions.map((s) => {
-                  if (s.id === sessionToUse.id) {
-                    return {
-                      ...s,
-                      messages: s.messages.map((m) => {
-                        if (m.id === assistantMessageId) {
-                          return {
-                            ...m,
-                            content: accumulatedText,
-                            ...(accumulatedThinking ? { thinking: accumulatedThinking } : {}),
-                            ...(toolCallsSnapshot ? { toolCalls: toolCallsSnapshot } : {})
-                          };
-                        }
-                        if (m.id === userMessage.id && m.status !== 'delivered' && m.status !== 'read') {
-                          return { ...m, status: 'delivered' as const };
-                        }
-                        return m;
-                      }),
-                    };
-                  }
-                  return s;
-                });
-                localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
-                return next;
-              });
-            }
-          }
-          boundary = buffer.indexOf('\n\n');
-        }
-      }
-
-      // Mark any uncompleted tool calls as completed when stream ends
+    const finalizeStream = () => {
       if (Object.keys(currentToolCalls).length > 0) {
         for (const k of Object.keys(currentToolCalls)) {
           const idx = Number(k);
@@ -443,8 +389,13 @@ export default function App() {
                 if (m.id === userMessage.id) {
                   return { ...m, status: 'read' as const };
                 }
-                if (m.id === assistantMessageId && finalToolCallsSnapshot) {
-                  return { ...m, toolCalls: finalToolCallsSnapshot };
+                if (m.id === assistantMessageId) {
+                  return {
+                    ...m,
+                    content: accumulatedText,
+                    ...(accumulatedThinking ? { thinking: accumulatedThinking } : {}),
+                    ...(finalToolCallsSnapshot ? { toolCalls: finalToolCallsSnapshot } : {}),
+                  };
                 }
                 return m;
               }),
@@ -455,47 +406,173 @@ export default function App() {
         localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
         return next;
       });
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.log('Stream aborted by user');
+
+      setIsStreaming(false);
+      messageHandlerRef.current = null;
+    };
+
+    messageHandlerRef.current = (parsed: any) => {
+      if (parsed.error && parsed.type !== 'error') {
+        setSessions((prev) => {
+          const next = prev.map((s) => {
+            if (s.id === sessionToUse.id) {
+              return {
+                ...s,
+                messages: s.messages.map((m) =>
+                  m.id === assistantMessageId
+                    ? { ...m, content: parsed.error, error: true }
+                    : m
+                ),
+              };
+            }
+            return s;
+          });
+          localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
+          return next;
+        });
         setIsStreaming(false);
+        messageHandlerRef.current = null;
         return;
       }
 
-      console.error('Streaming error:', error);
+      const msgType = parsed.type;
 
-      setSessions((prevSessions) => {
-        const next = prevSessions.map((s) => {
-          if (s.id === sessionToUse.id) {
-            return {
-              ...s,
-              messages: s.messages.map((m) =>
-                m.id === assistantMessageId
-                  ? {
-                      ...m,
-                      content: error.message || 'An error occurred during processing. Please try again.',
-                      error: true
-                    }
-                  : m
-              ),
-            };
+      if (msgType === 'text_delta') {
+        const chunkText = parsed.content || parsed.text || '';
+        accumulatedText += chunkText;
+        updateSessionMessages();
+      } else if (msgType === 'thinking_delta') {
+        const chunkThinking = parsed.content || '';
+        accumulatedThinking += chunkThinking;
+        updateSessionMessages();
+      } else if (msgType === 'tool_call_delta') {
+        const index = parsed.index ?? 0;
+        const existing = currentToolCalls[index] || { args: '', status: 'calling' };
+        currentToolCalls[index] = {
+          ...existing,
+          id: parsed.id || existing.id,
+          name: parsed.name || existing.name,
+          args: existing.args + (parsed.args || ''),
+          status: existing.status === 'completed' ? 'completed' : 'calling',
+        };
+        updateSessionMessages();
+      } else if (msgType === 'tool_call_executing') {
+        let targetIndex: number | null = null;
+        for (const [k, v] of Object.entries(currentToolCalls)) {
+          const idx = Number(k);
+          if ((v as any).runId === parsed.id || v.id === parsed.id) {
+            targetIndex = idx;
+            break;
           }
-          return s;
+        }
+        if (targetIndex === null) {
+          for (const [k, v] of Object.entries(currentToolCalls)) {
+            const idx = Number(k);
+            if (v.name === parsed.name && v.status !== 'completed') {
+              targetIndex = idx;
+              break;
+            }
+          }
+        }
+        if (targetIndex === null) {
+          const keys = Object.keys(currentToolCalls).map(Number);
+          targetIndex = keys.length > 0 ? Math.max(...keys) + 1 : 0;
+        }
+
+        const existing = currentToolCalls[targetIndex] || { args: '', status: 'executing' };
+        currentToolCalls[targetIndex] = {
+          ...existing,
+          id: existing.id || parsed.id,
+          ...(parsed.id ? { runId: parsed.id } : {}),
+          name: parsed.name || existing.name,
+          input: parsed.input || existing.input,
+          status: 'executing',
+        } as ToolCallState;
+        updateSessionMessages();
+      } else if (msgType === 'tool_call_end') {
+        let targetIndex: number | null = null;
+        for (const [k, v] of Object.entries(currentToolCalls)) {
+          const idx = Number(k);
+          if ((v as any).runId === parsed.id || v.id === parsed.id) {
+            targetIndex = idx;
+            break;
+          }
+        }
+        if (targetIndex === null) {
+          for (const [k, v] of Object.entries(currentToolCalls)) {
+            const idx = Number(k);
+            if (v.name === parsed.name && v.status === 'executing') {
+              targetIndex = idx;
+              break;
+            }
+          }
+        }
+        if (targetIndex === null) {
+          for (const [k, v] of Object.entries(currentToolCalls)) {
+            const idx = Number(k);
+            if (v.name === parsed.name && v.status !== 'completed') {
+              targetIndex = idx;
+              break;
+            }
+          }
+        }
+        if (targetIndex === null) {
+          targetIndex = 0;
+        }
+        const existing = currentToolCalls[targetIndex] || { args: '', status: 'completed' };
+        currentToolCalls[targetIndex] = {
+          ...existing,
+          status: 'completed',
+          output: parsed.output || undefined,
+        };
+        updateSessionMessages();
+      } else if (msgType === 'done') {
+        finalizeStream();
+      } else if (msgType === 'cancelled') {
+        finalizeStream();
+      } else if (msgType === 'error') {
+        setSessions((prev) => {
+          const next = prev.map((s) => {
+            if (s.id === sessionToUse.id) {
+              return {
+                ...s,
+                messages: s.messages.map((m) =>
+                  m.id === assistantMessageId
+                    ? {
+                        ...m,
+                        content: parsed.error || 'An error occurred during processing. Please try again.',
+                        error: true,
+                      }
+                    : m
+                ),
+              };
+            }
+            return s;
+          });
+          localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
+          return next;
         });
-        localStorage.setItem('openai_chat_sessions', JSON.stringify(next));
-        return next;
-      });
-    } finally {
-      setIsStreaming(false);
-    }
+        setIsStreaming(false);
+        messageHandlerRef.current = null;
+      }
+    };
+
+    wsRef.current!.send(JSON.stringify({
+      type: 'chat',
+      messages: updatedMessages.map((m) => ({ role: m.role, content: m.content })),
+      config: {
+        systemInstruction: config.systemInstruction,
+        temperature: config.temperature,
+        topP: config.topP,
+        topK: config.topK,
+      },
+    }));
   };
 
   const handleStopGeneration = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'cancel' }));
     }
-    setIsStreaming(false);
   };
 
   const handleDeleteDocument = async (id: number) => {

@@ -67,17 +67,22 @@ class GraphIndexingService:
 
     def _setup_vector_index(self, dimension: int):
         """Configure Neo4j Vector Index for entity descriptions."""
-        create_index_query = """
-        CREATE VECTOR INDEX `entity_embeddings` IF NOT EXISTS
-        FOR (n:Entity) ON (n.embedding)
-        OPTIONS {indexConfig: {
-          `vector.dimensions`: $dimension,
-          `vector.similarity_function`: 'cosine'
-        }}
-        """
+        if getattr(self, "_index_initialized", False):
+            return
         try:
-            self.graph_store.query(create_index_query, {"dimension": dimension})
-            logger.info("Successfully set up Neo4j vector index 'entity_embeddings'.")
+            check = self.graph_store.query("SHOW INDEXES YIELD name WHERE name = 'entity_embeddings' RETURN name")
+            if not check:
+                create_index_query = """
+                CREATE VECTOR INDEX `entity_embeddings` IF NOT EXISTS
+                FOR (n:Entity) ON (n.embedding)
+                OPTIONS {indexConfig: {
+                  `vector.dimensions`: $dimension,
+                  `vector.similarity_function`: 'cosine'
+                }}
+                """
+                self.graph_store.query(create_index_query, {"dimension": dimension})
+                logger.info("Successfully set up Neo4j vector index 'entity_embeddings'.")
+            self._index_initialized = True
         except Exception as e:
             logger.warning(f"Could not create vector index (might be older Neo4j version or already exists): {e}")
 

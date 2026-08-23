@@ -96,6 +96,16 @@ export const ToolCallBadge: React.FC<ToolCallBadgeProps> = ({ toolCall }) => {
               ? JSON.stringify(toolCall.input, null, 2)
               : toolCall.args || '(Streaming arguments...)'}
           </pre>
+          {toolCall.output && (
+            <>
+              <div className="flex justify-between items-center text-slate-400 text-[10px] uppercase font-sans font-bold tracking-wider mt-2">
+                <span>Output</span>
+              </div>
+              <pre className="p-2.5 bg-slate-900 text-emerald-300 rounded-lg overflow-x-auto whitespace-pre-wrap break-all leading-relaxed text-[10px] max-h-64 overflow-y-auto">
+                {toolCall.output}
+              </pre>
+            </>
+          )}
         </div>
       )}
     </div>

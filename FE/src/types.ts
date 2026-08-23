@@ -10,6 +10,7 @@ export interface ToolCallState {
   name?: string;
   args: string;
   input?: any;
+  output?: string;
   status: 'calling' | 'executing' | 'completed' | 'error';
 }
 

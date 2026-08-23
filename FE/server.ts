@@ -6,6 +6,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import "dotenv/config";
 
 async function startServer() {
@@ -85,48 +86,13 @@ async function startServer() {
     }
   });
 
-  // 3. API: Stream Chat Response (SSE)
-  app.post("/api/chat/stream", async (req, res) => {
-    try {
-      // Forward all chat stream requests to the Python backend to run Graph RAG
-      try {
-        const response = await fetch("http://127.0.0.1:8000/api/chat/stream", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(req.body),
-        });
-
-        res.setHeader("Content-Type", "text/event-stream");
-        res.setHeader("Cache-Control", "no-cache");
-        res.setHeader("Connection", "keep-alive");
-
-        if (!response.body) {
-          res.write(`data: ${JSON.stringify({ error: "No response body from backend." })}\n\n`);
-          return res.end();
-        }
-
-        // Forward stream bytes
-        const reader = response.body.getReader();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          res.write(value);
-        }
-        return res.end();
-      } catch (error: any) {
-        console.error("Backend proxy error:", error);
-        res.setHeader("Content-Type", "text/event-stream");
-        res.write(`data: ${JSON.stringify({ error: `Backend connection error: ${error.message}` })}\n\n`);
-        return res.end();
-      }
-    } catch (error: any) {
-      console.error("Streaming error:", error);
-      res.write(`data: ${JSON.stringify({ error: error.message || "An unexpected error occurred." })}\n\n`);
-      res.end();
-    }
+  // 3. WebSocket proxy for chat streaming
+  const wsProxy = createProxyMiddleware({
+    target: 'http://127.0.0.1:8000',
+    ws: true,
+    changeOrigin: true,
   });
+  app.use('/ws', wsProxy);
 
   // 4. API: Get Documents List
   app.get("/api/documents", async (req, res) => {
@@ -217,9 +183,10 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
+  server.on('upgrade', wsProxy.upgrade);
 }
 
 startServer();

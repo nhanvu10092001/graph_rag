@@ -12,5 +12,3 @@ class Message(BaseModel):
 class ChatStreamRequest(BaseModel):
     messages: List[Message]
     model: Optional[str] = None
-    config: Optional[dict] = None
-    apiKey: Optional[str] = None

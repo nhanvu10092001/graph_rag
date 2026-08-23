@@ -102,8 +102,6 @@ def query_knowledge_graph(
 
     logger.info(f"Agent is querying Knowledge Graph for: '{query}'")
     try:
-        allowed_docs = None
-
         search_mode = default_search_mode if mode == "auto" else mode
         if search_mode == "auto":
             search_mode = _classify_search_mode(query)
@@ -115,7 +113,6 @@ def query_knowledge_graph(
                 query=query,
                 level=global_search_config.get("default_level", 0),
                 max_communities=global_search_config.get("max_communities", 10),
-                allowed_docs=allowed_docs,
             )
             response = res.get("response", "")
             communities_used = res.get("selected_communities", [])
@@ -129,7 +126,7 @@ def query_knowledge_graph(
                 "Using ARK search (Adaptive Retriever of Knowledge trajectory agents)"
             )
             try:
-                res = services.ark_query_service.retrieve(query, allowed_docs=allowed_docs)
+                res = services.ark_query_service.retrieve(query)
                 context_str = res.get("context", "")
 
                 if (
@@ -150,9 +147,7 @@ def query_knowledge_graph(
                     return f"Query: '{query}'. Result: Error executing ARK retrieval."
 
         logger.info("Using LOCAL search (vector + graph traversal)")
-        res = services.graph_query_service.retrieve_relevant_subgraph(
-            query, allowed_docs=allowed_docs
-        )
+        res = services.graph_query_service.retrieve_relevant_subgraph(query)
         context_str = res.get("context_str", "")
         if (
             not context_str

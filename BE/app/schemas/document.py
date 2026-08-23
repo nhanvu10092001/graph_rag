@@ -11,7 +11,6 @@ class DocumentResponse(BaseModel):
     status: str
     entity_count: Optional[int] = None
     relationship_count: Optional[int] = None
-    group_id: Optional[int] = None
     created_at: str
 
 

@@ -60,3 +60,35 @@ def test_graph_query_service():
     assert res["relationships"][0]["source"] == "ALICE"
     assert "Matched Entities:" in res["context_str"]
     assert "WORKS_AT" in res["context_str"]
+
+
+def test_neo4j_graph_store_database_param():
+    """Test Neo4jGraphStore connect and query methods accept database parameter."""
+    cfg = Neo4jConfig(uri="bolt://localhost:7687", username="neo4j", password="password")
+    store = Neo4jGraphStore(cfg)
+
+    # Mock Neo4jGraph constructor inside store.connect
+    mock_graph_default = MagicMock()
+    mock_graph_custom = MagicMock()
+
+    def mock_neo4j_graph_init(url, username, password, database):
+        if database == "group_1":
+            return mock_graph_custom
+        return mock_graph_default
+
+    from unittest.mock import patch
+    with patch("llm_utils_graph_rag.graph_store.Neo4jGraph", side_effect=mock_neo4j_graph_init):
+        # Default connection
+        g1 = store.connect()
+        assert g1 == mock_graph_default
+        assert store._current_db == "neo4j"
+
+        # Connection with specific database
+        g2 = store.connect(database="group_1")
+        assert g2 == mock_graph_custom
+        assert store._current_db == "group_1"
+
+        # Query with database parameter
+        store.query("MATCH (n) RETURN n", database="group_1")
+        assert mock_graph_custom.query.called
+

@@ -131,52 +131,9 @@ async function startServer() {
   // 4. API: Get Documents List
   app.get("/api/documents", async (req, res) => {
     try {
-      const queryParams = new URLSearchParams(req.query as any).toString();
-      const targetUrl = queryParams 
-        ? `http://127.0.0.1:8000/api/documents?${queryParams}`
-        : "http://127.0.0.1:8000/api/documents";
-      const response = await fetch(targetUrl);
+      const response = await fetch("http://127.0.0.1:8000/api/documents");
       const data = await response.json();
       res.json(data);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  // API: Get Groups List
-  app.get("/api/groups", async (req, res) => {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/groups");
-      const data = await response.json();
-      res.json(data);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  // API: Create Group
-  app.post("/api/groups", async (req, res) => {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/groups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body)
-      });
-      const data = await response.json();
-      res.status(response.status).json(data);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  // API: Delete Group
-  app.delete("/api/groups/:id", async (req, res) => {
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/api/groups/${req.params.id}`, {
-        method: "DELETE"
-      });
-      const data = await response.json();
-      res.status(response.status).json(data);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -215,6 +172,32 @@ async function startServer() {
       res.status(response.status).json(data);
     } catch (e: any) {
       console.error("Upload proxy error:", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // 7. API: Community Detection Endpoints Proxy
+  app.use("/api/community", async (req, res) => {
+    try {
+      const queryParams = new URLSearchParams(req.query as any).toString();
+      const targetPath = req.path || "";
+      const targetUrl = queryParams
+        ? `http://127.0.0.1:8000/api/community${targetPath}?${queryParams}`
+        : `http://127.0.0.1:8000/api/community${targetPath}`;
+
+      const options: RequestInit = {
+        method: req.method,
+        headers: { "Content-Type": "application/json" },
+      };
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        options.body = JSON.stringify(req.body);
+      }
+
+      const response = await fetch(targetUrl, options);
+      const data = await response.json();
+      res.status(response.status).json(data);
+    } catch (e: any) {
+      console.error("Community proxy error:", e);
       res.status(500).json({ error: e.message });
     }
   });

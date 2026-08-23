@@ -31,7 +31,10 @@ class ArkQueryService:
         self.temperature = self.config.get("temperature", 0.7)
         self.top_k = self.config.get("top_k_fused", 10)
 
-    def get_retriever(self, allowed_docs: Optional[List[str]] = None) -> ArkRetriever:
+    def get_retriever(
+        self,
+        allowed_docs: Optional[List[str]] = None,
+    ) -> ArkRetriever:
         """Instantiates the LangChain ArkRetriever with the given document filters."""
         return ArkRetriever(
             graph_store=self.graph_store,
@@ -40,18 +43,26 @@ class ArkQueryService:
             max_steps=self.max_steps,
             temperature=self.temperature,
             top_k=self.top_k,
-            allowed_docs=allowed_docs
+            allowed_docs=allowed_docs,
         )
 
-    def retrieve(self, query: str, allowed_docs: Optional[List[str]] = None) -> Dict[str, Any]:
+    def retrieve(
+        self,
+        query: str,
+        allowed_docs: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         """Sync wrapper for retrieving and formatting nodes."""
-        retriever = self.get_retriever(allowed_docs)
+        retriever = self.get_retriever(allowed_docs=allowed_docs)
         docs = retriever.invoke(query)
         return self._format_response(docs)
 
-    async def aretrieve(self, query: str, allowed_docs: Optional[List[str]] = None) -> Dict[str, Any]:
+    async def aretrieve(
+        self,
+        query: str,
+        allowed_docs: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         """Async wrapper for retrieving and formatting nodes."""
-        retriever = self.get_retriever(allowed_docs)
+        retriever = self.get_retriever(allowed_docs=allowed_docs)
         docs = await retriever.ainvoke(query)
         return self._format_response(docs)
 

@@ -62,27 +62,27 @@ class CommunityDetectionService:
 
     # ── Public API ────────────────────────────────────────────────────────
 
-    def detect_communities(self) -> Dict[str, Any]:
+    def detect_communities(self, group_id: Optional[int] = None) -> Dict[str, Any]:
         """Run community detection on the Entity graph.
 
         Tries Neo4j GDS first (if available), falls back to Python igraph.
         Returns stats about detected communities.
         """
         self.graph_store.connect()
-        logger.info(f"Starting community detection (algorithm={self.algorithm}, resolution={self.resolution})")
+        logger.info(f"Starting community detection (algorithm={self.algorithm}, resolution={self.resolution}, group_id={group_id})")
 
         # Try Neo4j GDS first
         if self._has_gds():
             logger.info("Using Neo4j GDS for community detection.")
-            stats = self._detect_with_gds()
+            stats = self._detect_with_gds(group_id=group_id)
         else:
             logger.info("Neo4j GDS not available. Using Python igraph fallback.")
-            stats = self._detect_with_igraph()
+            stats = self._detect_with_igraph(group_id=group_id)
 
         logger.info(f"Community detection complete: {stats}")
         return stats
 
-    def generate_community_summaries(self) -> Dict[str, Any]:
+    def generate_community_summaries(self, group_id: Optional[int] = None) -> Dict[str, Any]:
         """Generate LLM summaries for all detected communities at each level."""
         self.graph_store.connect()
 
@@ -90,18 +90,18 @@ class CommunityDetectionService:
         self._setup_community_vector_index()
 
         # Get all distinct community levels
-        levels = self._get_community_levels()
+        levels = self._get_community_levels(group_id=group_id)
         if not levels:
             return {"status": "warning", "message": "No communities found. Run detect_communities() first."}
 
         total_summaries = 0
         for level in levels:
-            community_ids = self._get_community_ids_at_level(level)
-            logger.info(f"Generating summaries for {len(community_ids)} communities at level {level}...")
+            community_ids = self._get_community_ids_at_level(level, group_id=group_id)
+            logger.info(f"Generating summaries for {len(community_ids)} communities at level {level} (group_id={group_id})...")
 
             for comm_id in community_ids:
                 try:
-                    self._summarize_community(comm_id, level)
+                    self._summarize_community(comm_id, level, group_id=group_id)
                     total_summaries += 1
                 except Exception as e:
                     logger.error(f"Failed to summarize community {comm_id} at level {level}: {e}")
@@ -112,19 +112,19 @@ class CommunityDetectionService:
             "levels": levels,
         }
 
-    def rebuild_communities(self) -> Dict[str, Any]:
+    def rebuild_communities(self, group_id: Optional[int] = None) -> Dict[str, Any]:
         """Full rebuild: clear old communities, re-detect, and re-summarize."""
         self.graph_store.connect()
-        logger.info("Rebuilding all communities...")
+        logger.info(f"Rebuilding communities for group_id={group_id}...")
 
         # 1. Clear existing community data
-        self._clear_communities()
+        self._clear_communities(group_id=group_id)
 
         # 2. Re-detect
-        detection_stats = self.detect_communities()
+        detection_stats = self.detect_communities(group_id=group_id)
 
         # 3. Re-summarize
-        summary_stats = self.generate_community_summaries()
+        summary_stats = self.generate_community_summaries(group_id=group_id)
 
         return {
             "status": "success",
@@ -136,41 +136,46 @@ class CommunityDetectionService:
         self,
         level: int = 0,
         allowed_docs: Optional[List[str]] = None,
+        group_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
-        """Retrieve all community summaries at a given level, optionally filtered by documents."""
-        self.graph_store.connect()
+        """Retrieve all community summaries at a given level, optionally filtered by documents or group_id."""
+        target_db = f"group_{group_id}" if group_id is not None else None
+        group_key = self._get_group_key(group_id)
+        self.graph_store.connect(database=target_db)
 
         # Check if Community label exists in Neo4j to avoid DBMS schema warnings
         try:
             label_check = self.graph_store.query(
-                'CALL db.labels() YIELD label WHERE label = "Community" RETURN count(label) AS cnt'
+                'CALL db.labels() YIELD label WHERE label = "Community" RETURN count(label) AS cnt',
+                database=target_db
             )
             if not label_check or label_check[0].get("cnt", 0) == 0:
                 return []
         except Exception:
             pass
 
-        if allowed_docs is not None:
+        if allowed_docs is not None or group_id is not None:
             cypher = """
             MATCH (c:Community {level: $level})
+            WHERE ($group_id IS NULL OR c.group_id = $group_id OR c.group_key = $group_key)
             OPTIONAL MATCH (c)<-[:BELONGS_TO]-(e:Entity)
             WITH c, collect(e) AS members
-            WHERE any(e IN members WHERE any(doc IN e.source_documents WHERE doc IN $allowed_docs))
+            WHERE ($allowed_docs IS NULL OR any(e IN members WHERE any(doc IN e.source_documents WHERE doc IN $allowed_docs)))
             RETURN c.id AS id, c.title AS title, c.summary AS summary,
                    c.findings AS findings, c.importance_score AS importance_score,
-                   c.entity_count AS entity_count, c.level AS level
+                   c.entity_count AS entity_count, c.level AS level, c.group_id AS group_id, c.group_key AS group_key
             ORDER BY c.importance_score DESC
             """
-            results = self.graph_store.query(cypher, {"level": level, "allowed_docs": allowed_docs})
+            results = self.graph_store.query(cypher, {"level": level, "allowed_docs": allowed_docs, "group_id": group_id, "group_key": group_key}, database=target_db)
         else:
             cypher = """
             MATCH (c:Community {level: $level})
             RETURN c.id AS id, c.title AS title, c.summary AS summary,
                    c.findings AS findings, c.importance_score AS importance_score,
-                   c.entity_count AS entity_count, c.level AS level
+                   c.entity_count AS entity_count, c.level AS level, c.group_id AS group_id, c.group_key AS group_key
             ORDER BY c.importance_score DESC
             """
-            results = self.graph_store.query(cypher, {"level": level})
+            results = self.graph_store.query(cypher, {"level": level}, database=target_db)
 
         return results
 
@@ -179,31 +184,91 @@ class CommunityDetectionService:
         query: str,
         top_k: int = 5,
         level: Optional[int] = None,
+        group_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """Vector search over community summaries."""
-        self.graph_store.connect()
+        target_db = f"group_{group_id}" if group_id is not None else None
+        group_key = self._get_group_key(group_id)
+        self.graph_store.connect(database=target_db)
         query_vector = self.embeddings.embed_query(query)
 
         cypher = """
         CALL db.index.vector.queryNodes('community_embeddings', $top_k, $vector)
         YIELD node, score
         WHERE ($level IS NULL OR node.level = $level)
+          AND ($group_id IS NULL OR node.group_id = $group_id OR node.group_key = $group_key)
         RETURN node.id AS id, node.title AS title, node.summary AS summary,
                node.findings AS findings, node.importance_score AS importance_score,
-               node.level AS level, score
+               node.level AS level, node.group_id AS group_id, node.group_key AS group_key, score
         """
         try:
             results = self.graph_store.query(cypher, {
                 "top_k": top_k,
                 "vector": query_vector,
                 "level": level,
-            })
+                "group_id": group_id,
+                "group_key": group_key,
+            }, database=target_db)
             return results
         except Exception as e:
             logger.warning(f"Community vector search failed: {e}")
             return []
 
-    # ── Neo4j GDS Detection ──────────────────────────────────────────────
+    def _get_group_key(self, group_id: Optional[int]) -> str:
+        return f"group_{group_id}" if group_id is not None else "global"
+
+    def _get_community_prop_name(self, group_id: Optional[int], level: int) -> str:
+        prefix = f"group_{group_id}" if group_id is not None else "global"
+        return f"{prefix}_community_level_{level}"
+
+    def _create_community_nodes_and_relationships(self, group_id: Optional[int] = None) -> None:
+        """Immediately create :Community nodes and :BELONGS_TO relationships after detection."""
+        group_key = self._get_group_key(group_id)
+        target_db = f"group_{group_id}" if group_id is not None else None
+
+        for level in range(self.max_levels):
+            prop_name = self._get_community_prop_name(group_id, level)
+            community_ids = self._get_community_ids_at_level(level, group_id=group_id)
+            for comm_id in community_ids:
+                comm_node_id = f"community_{group_key}_lvl{level}_{comm_id}"
+
+                cypher_comm = """
+                MERGE (c:Community {id: $id})
+                SET c.group_key = $group_key,
+                    c.group_id = $group_id,
+                    c.level = $level,
+                    c.community_id = $comm_id,
+                    c.title = COALESCE(c.title, $title),
+                    c.summary = COALESCE(c.summary, 'Community partition created. Run generate_community_summaries() to generate LLM summary.'),
+                    c.importance_score = COALESCE(c.importance_score, 0.5),
+                    c.entity_count = COALESCE(c.entity_count, 0)
+                """
+                self.graph_store.query(cypher_comm, {
+                    "id": comm_node_id,
+                    "group_key": group_key,
+                    "group_id": group_id,
+                    "level": level,
+                    "comm_id": comm_id,
+                    "title": f"Community {comm_id} ({group_key} level {level})"
+                }, database=target_db)
+
+                cypher_belongs = f"""
+                MATCH (e:Entity)
+                WHERE e.`{prop_name}` = $comm_id
+                  AND ($group_id IS NULL OR $group_id IN COALESCE(e.group_ids, []))
+                MATCH (c:Community {{id: $comm_id_node}})
+                MERGE (e)-[r:BELONGS_TO {{group_key: $group_key}}]->(c)
+                SET r.group_id = $group_id, r.level = $level
+                WITH c, count(e) AS cnt
+                SET c.entity_count = cnt
+                """
+                self.graph_store.query(cypher_belongs, {
+                    "comm_id": comm_id,
+                    "group_id": group_id,
+                    "comm_id_node": comm_node_id,
+                    "group_key": group_key,
+                    "level": level,
+                }, database=target_db)
 
     def _has_gds(self) -> bool:
         """Check if Neo4j GDS plugin is available."""
@@ -214,7 +279,7 @@ class CommunityDetectionService:
         except Exception:
             return False
 
-    def _detect_with_gds(self) -> Dict[str, Any]:
+    def _detect_with_gds(self, group_id: Optional[int] = None) -> Dict[str, Any]:
         """Run Leiden via Neo4j GDS projected graph."""
         # 1. Create in-memory graph projection
         try:
@@ -222,13 +287,23 @@ class CommunityDetectionService:
         except Exception:
             pass  # Graph didn't exist
 
-        self.graph_store.query("""
-        CALL gds.graph.project(
-            'entity_graph',
-            'Entity',
-            {ALL: {type: '*', orientation: 'UNDIRECTED'}}
-        )
-        """)
+        if group_id is not None:
+            self.graph_store.query("""
+            CALL gds.graph.project.cypher(
+                'entity_graph',
+                'MATCH (e:Entity) WHERE $group_id IN COALESCE(e.group_ids, []) RETURN id(e) AS id, labels(e) AS labels',
+                'MATCH (e1:Entity)-[r]->(e2:Entity) WHERE $group_id IN COALESCE(r.group_ids, []) AND $group_id IN COALESCE(e1.group_ids, []) AND $group_id IN COALESCE(e2.group_ids, []) RETURN id(e1) AS source, id(e2) AS target, type(r) AS type',
+                {parameters: {group_id: $group_id}}
+            )
+            """, {"group_id": group_id})
+        else:
+            self.graph_store.query("""
+            CALL gds.graph.project(
+                'entity_graph',
+                'Entity',
+                {ALL: {type: '*', orientation: 'UNDIRECTED'}}
+            )
+            """)
 
         # 2. Run Leiden community detection
         algo_name = "gds.leiden" if self.algorithm == "leiden" else "gds.louvain"
@@ -249,9 +324,9 @@ class CommunityDetectionService:
         }
 
         # 3. Create hierarchical levels by adjusting resolution
-        for level in range(1, self.max_levels):
+        for level in range(self.max_levels):
             adjusted_res = self.resolution * (0.5 ** level)  # Coarser at higher levels
-            prop_name = f"community_level_{level}"
+            prop_name = self._get_community_prop_name(group_id, level)
             try:
                 r = self.graph_store.query(f"""
                 CALL {algo_name}.write('entity_graph', {{
@@ -265,8 +340,8 @@ class CommunityDetectionService:
             except Exception as e:
                 logger.warning(f"Failed to detect communities at level {level}: {e}")
 
-        # 4. Write BELONGS_TO relationships
-        self._write_belongs_to_relationships()
+        # 4. Write BELONGS_TO relationships and create Community placeholder nodes
+        self._create_community_nodes_and_relationships(group_id=group_id)
 
         # Cleanup projection
         try:
@@ -276,21 +351,36 @@ class CommunityDetectionService:
 
         return stats
 
-    def _detect_with_igraph(self) -> Dict[str, Any]:
+    def _detect_with_igraph(self, group_id: Optional[int] = None) -> Dict[str, Any]:
         """Run Leiden using Python igraph + leidenalg library."""
         import igraph as ig
         import leidenalg
 
         # 1. Export graph from Neo4j
-        nodes_result = self.graph_store.query("""
-        MATCH (e:Entity)
-        RETURN e.id AS id, e.type AS type, e.description AS description
-        """)
+        if group_id is not None:
+            nodes_result = self.graph_store.query("""
+            MATCH (e:Entity)
+            WHERE $group_id IN COALESCE(e.group_ids, [])
+            RETURN e.id AS id, e.type AS type, e.description AS description
+            """, {"group_id": group_id})
 
-        edges_result = self.graph_store.query("""
-        MATCH (e1:Entity)-[r]->(e2:Entity)
-        RETURN e1.id AS source, e2.id AS target, type(r) AS rel_type
-        """)
+            edges_result = self.graph_store.query("""
+            MATCH (e1:Entity)-[r]->(e2:Entity)
+            WHERE $group_id IN COALESCE(r.group_ids, [])
+              AND $group_id IN COALESCE(e1.group_ids, [])
+              AND $group_id IN COALESCE(e2.group_ids, [])
+            RETURN e1.id AS source, e2.id AS target, type(r) AS rel_type
+            """, {"group_id": group_id})
+        else:
+            nodes_result = self.graph_store.query("""
+            MATCH (e:Entity)
+            RETURN e.id AS id, e.type AS type, e.description AS description
+            """)
+
+            edges_result = self.graph_store.query("""
+            MATCH (e1:Entity)-[r]->(e2:Entity)
+            RETURN e1.id AS source, e2.id AS target, type(r) AS rel_type
+            """)
 
         if not nodes_result:
             return {"algorithm": self.algorithm, "backend": "igraph", "community_count_level_0": 0}
@@ -330,7 +420,7 @@ class CommunityDetectionService:
             stats[f"community_count_level_{level}"] = num_communities
 
             # 4. Write community assignments back to Neo4j
-            prop_name = f"community_level_{level}"
+            prop_name = self._get_community_prop_name(group_id, level)
             for idx, comm_id in enumerate(community_assignments):
                 node_id = node_ids[idx]
                 self.graph_store.query(
@@ -338,23 +428,33 @@ class CommunityDetectionService:
                     {"id": node_id, "comm_id": comm_id},
                 )
 
-        # 5. Write BELONGS_TO relationships
-        self._write_belongs_to_relationships()
+        # 5. Write BELONGS_TO relationships and create Community placeholder nodes
+        self._create_community_nodes_and_relationships(group_id=group_id)
 
         return stats
 
     # ── Community Summarization ──────────────────────────────────────────
 
-    def _summarize_community(self, community_id: int, level: int) -> None:
+    def _summarize_community(self, community_id: int, level: int, group_id: Optional[int] = None) -> None:
         """Generate and store a summary for a single community."""
-        prop_name = f"community_level_{level}"
+        prop_name = self._get_community_prop_name(group_id, level)
+        group_key = self._get_group_key(group_id)
+        target_db = f"group_{group_id}" if group_id is not None else None
 
         # Gather entities in this community
-        entities_result = self.graph_store.query(f"""
-        MATCH (e:Entity)
-        WHERE e.`{prop_name}` = $comm_id
-        RETURN e.id AS id, e.type AS type, e.description AS description
-        """, {"comm_id": community_id})
+        if group_id is not None:
+            entities_result = self.graph_store.query(f"""
+            MATCH (e:Entity)
+            WHERE e.`{prop_name}` = $comm_id
+              AND $group_id IN COALESCE(e.group_ids, [])
+            RETURN e.id AS id, e.type AS type, e.description AS description
+            """, {"comm_id": community_id, "group_id": group_id}, database=target_db)
+        else:
+            entities_result = self.graph_store.query(f"""
+            MATCH (e:Entity)
+            WHERE e.`{prop_name}` = $comm_id
+            RETURN e.id AS id, e.type AS type, e.description AS description
+            """, {"comm_id": community_id}, database=target_db)
 
         if not entities_result:
             return
@@ -362,11 +462,19 @@ class CommunityDetectionService:
         entity_ids = [e["id"] for e in entities_result]
 
         # Gather relationships between community members
-        rels_result = self.graph_store.query(f"""
-        MATCH (e1:Entity)-[r]->(e2:Entity)
-        WHERE e1.`{prop_name}` = $comm_id AND e2.`{prop_name}` = $comm_id
-        RETURN e1.id AS source, type(r) AS rel, e2.id AS target, r.description AS description
-        """, {"comm_id": community_id})
+        if group_id is not None:
+            rels_result = self.graph_store.query(f"""
+            MATCH (e1:Entity)-[r]->(e2:Entity)
+            WHERE e1.`{prop_name}` = $comm_id AND e2.`{prop_name}` = $comm_id
+              AND $group_id IN COALESCE(r.group_ids, [])
+            RETURN e1.id AS source, type(r) AS rel, e2.id AS target, r.description AS description
+            """, {"comm_id": community_id, "group_id": group_id})
+        else:
+            rels_result = self.graph_store.query(f"""
+            MATCH (e1:Entity)-[r]->(e2:Entity)
+            WHERE e1.`{prop_name}` = $comm_id AND e2.`{prop_name}` = $comm_id
+            RETURN e1.id AS source, type(r) AS rel, e2.id AS target, r.description AS description
+            """, {"comm_id": community_id})
 
         # Format for prompt
         entities_text = "\n".join(
@@ -436,7 +544,7 @@ class CommunityDetectionService:
         embedding = self.embeddings.embed_query(summary_text)
 
         # Create unique community node ID
-        comm_node_id = f"community_{level}_{community_id}"
+        comm_node_id = f"community_{group_key}_lvl{level}_{community_id}"
 
         # Store Community node in Neo4j
         self.graph_store.query("""
@@ -447,7 +555,10 @@ class CommunityDetectionService:
             c.findings = $findings,
             c.importance_score = $importance_score,
             c.entity_count = $entity_count,
-            c.embedding = $embedding
+            c.embedding = $embedding,
+            c.group_id = $group_id,
+            c.group_key = $group_key,
+            c.community_id = $community_id
         """, {
             "id": comm_node_id,
             "level": level,
@@ -457,15 +568,25 @@ class CommunityDetectionService:
             "importance_score": float(report.get("importance_score", 0.5)),
             "entity_count": len(entities_result),
             "embedding": embedding,
-        })
+            "group_id": group_id,
+            "group_key": group_key,
+            "community_id": community_id,
+        }, database=target_db)
 
         # Create BELONGS_TO relationships from entities to this community
         for entity_id in entity_ids:
             self.graph_store.query("""
             MATCH (e:Entity {id: $entity_id})
             MATCH (c:Community {id: $comm_id})
-            MERGE (e)-[:BELONGS_TO]->(c)
-            """, {"entity_id": entity_id, "comm_id": comm_node_id})
+            MERGE (e)-[r:BELONGS_TO {group_key: $group_key}]->(c)
+            SET r.group_id = $group_id, r.level = $level
+            """, {
+                "entity_id": entity_id,
+                "comm_id": comm_node_id,
+                "group_key": group_key,
+                "group_id": group_id,
+                "level": level,
+            }, database=target_db)
 
     # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -476,51 +597,91 @@ class CommunityDetectionService:
         # The actual BELONGS_TO edges are created in _summarize_community().
         pass
 
-    def _get_community_levels(self) -> List[int]:
+    def _get_community_levels(self, group_id: Optional[int] = None) -> List[int]:
         """Get all distinct community levels that have been detected."""
+        target_db = f"group_{group_id}" if group_id is not None else None
         levels = []
         for level in range(self.max_levels):
-            prop_name = f"community_level_{level}"
+            prop_name = self._get_community_prop_name(group_id, level)
             try:
-                result = self.graph_store.query(f"""
-                MATCH (e:Entity)
-                WHERE e.`{prop_name}` IS NOT NULL
-                RETURN DISTINCT 1 AS has_data LIMIT 1
-                """)
+                if group_id is not None:
+                    result = self.graph_store.query(f"""
+                    MATCH (e:Entity)
+                    WHERE e.`{prop_name}` IS NOT NULL
+                      AND $group_id IN COALESCE(e.group_ids, [])
+                    RETURN DISTINCT 1 AS has_data LIMIT 1
+                    """, {"group_id": group_id}, database=target_db)
+                else:
+                    result = self.graph_store.query(f"""
+                    MATCH (e:Entity)
+                    WHERE e.`{prop_name}` IS NOT NULL
+                    RETURN DISTINCT 1 AS has_data LIMIT 1
+                    """, database=target_db)
                 if result:
                     levels.append(level)
             except Exception:
                 pass
         return levels
 
-    def _get_community_ids_at_level(self, level: int) -> List[int]:
+    def _get_community_ids_at_level(self, level: int, group_id: Optional[int] = None) -> List[int]:
         """Get all distinct community IDs at a given level."""
-        prop_name = f"community_level_{level}"
-        result = self.graph_store.query(f"""
-        MATCH (e:Entity)
-        WHERE e.`{prop_name}` IS NOT NULL
-        RETURN DISTINCT e.`{prop_name}` AS comm_id
-        ORDER BY comm_id
-        """)
+        target_db = f"group_{group_id}" if group_id is not None else None
+        prop_name = self._get_community_prop_name(group_id, level)
+        if group_id is not None:
+            result = self.graph_store.query(f"""
+            MATCH (e:Entity)
+            WHERE e.`{prop_name}` IS NOT NULL
+              AND $group_id IN COALESCE(e.group_ids, [])
+            RETURN DISTINCT e.`{prop_name}` AS comm_id
+            ORDER BY comm_id
+            """, {"group_id": group_id}, database=target_db)
+        else:
+            result = self.graph_store.query(f"""
+            MATCH (e:Entity)
+            WHERE e.`{prop_name}` IS NOT NULL
+            RETURN DISTINCT e.`{prop_name}` AS comm_id
+            ORDER BY comm_id
+            """, database=target_db)
         return [r["comm_id"] for r in result]
 
-    def _clear_communities(self) -> None:
-        """Remove all community nodes and BELONGS_TO relationships."""
-        self.graph_store.query("MATCH (c:Community) DETACH DELETE c")
+    def _clear_communities(self, group_id: Optional[int] = None) -> None:
+        """Remove community nodes and BELONGS_TO relationships."""
+        group_key = self._get_group_key(group_id)
+        target_db = f"group_{group_id}" if group_id is not None else None
 
-        # Remove community properties from entities
-        for level in range(self.max_levels):
-            prop_name = f"community_level_{level}"
-            try:
-                self.graph_store.query(f"""
-                MATCH (e:Entity)
-                WHERE e.`{prop_name}` IS NOT NULL
-                REMOVE e.`{prop_name}`
-                """)
-            except Exception:
-                pass
+        if group_id is not None:
+            self.graph_store.query(
+                "MATCH (c:Community) WHERE c.group_key = $group_key OR c.group_id = $group_id DETACH DELETE c",
+                {"group_key": group_key, "group_id": group_id},
+                database=target_db
+            )
+            for level in range(self.max_levels):
+                prop_name = self._get_community_prop_name(group_id, level)
+                try:
+                    self.graph_store.query(f"""
+                    MATCH (e:Entity)
+                    WHERE e.`{prop_name}` IS NOT NULL
+                      AND $group_id IN COALESCE(e.group_ids, [])
+                    REMOVE e.`{prop_name}`
+                    """, {"group_id": group_id}, database=target_db)
+                except Exception:
+                    pass
+        else:
+            self.graph_store.query("MATCH (c:Community) DETACH DELETE c", database=target_db)
 
-        logger.info("Cleared all existing community data.")
+            # Remove community properties from entities
+            for level in range(self.max_levels):
+                prop_name = self._get_community_prop_name(None, level)
+                try:
+                    self.graph_store.query(f"""
+                    MATCH (e:Entity)
+                    WHERE e.`{prop_name}` IS NOT NULL
+                    REMOVE e.`{prop_name}`
+                    """, database=target_db)
+                except Exception:
+                    pass
+
+        logger.info(f"Cleared existing community data (group_id={group_id}, group_key={group_key}).")
 
     def _setup_community_vector_index(self) -> None:
         """Create vector index for community summary embeddings."""

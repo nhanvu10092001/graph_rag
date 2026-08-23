@@ -19,7 +19,7 @@ export default function ThinkingPanel({ thinking }: ThinkingPanelProps) {
       >
         <div className="flex items-center gap-2">
           <Brain className="w-4 h-4 text-slate-500" />
-          <span>Quá trình suy nghĩ</span>
+          <span>Thinking Process</span>
         </div>
         {isExpanded ? (
           <ChevronDown className="w-4 h-4 text-slate-400" />

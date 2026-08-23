@@ -101,6 +101,7 @@ class GlobalSearchService:
         level: int = 0,
         max_communities: int = 10,
         allowed_docs: Optional[List[str]] = None,
+        group_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Execute a global search using map-reduce over community summaries.
 
@@ -109,16 +110,18 @@ class GlobalSearchService:
             level: Community hierarchy level (0 = finest, higher = coarser).
             max_communities: Max number of communities to process in map phase.
             allowed_docs: Optional document filter for group-based access control.
+            group_id: Optional group ID filter.
 
         Returns:
             Dict with response, partial_answers, selected_communities, etc.
         """
-        self.graph_store.connect()
-        logger.info(f"Global Search: query='{query}', level={level}")
+        target_db = f"group_{group_id}" if group_id is not None else None
+        self.graph_store.connect(database=target_db)
+        logger.info(f"Global Search: query='{query}', level={level}, group_id={group_id}, database={target_db}")
 
         # 1. Dynamic Community Selection — find relevant communities
         selected_communities = self._select_relevant_communities(
-            query, level, max_communities, allowed_docs
+            query, level, max_communities, allowed_docs, group_id
         )
 
         if not selected_communities:
@@ -135,7 +138,7 @@ class GlobalSearchService:
         partial_answers = []
         for community in selected_communities:
             try:
-                partial = self._map_community(query, community)
+                partial = self._map_community(query, community, group_id=group_id)
                 if partial and "NO_RELEVANT_INFO" not in partial:
                     partial_answers.append({
                         "community_id": community.get("id", "unknown"),
@@ -171,6 +174,7 @@ class GlobalSearchService:
         level: int,
         max_communities: int,
         allowed_docs: Optional[List[str]] = None,
+        group_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """Select relevant communities using a two-stage approach:
         1. Vector similarity on community summaries (broad retrieval)
@@ -178,30 +182,32 @@ class GlobalSearchService:
         """
         # Stage 1: Vector search to get candidate communities
         candidates = self.community_service.search_communities_by_vector(
-            query, top_k=max_communities * 2, level=level
+            query, top_k=max_communities * 2, level=level, group_id=group_id
         )
 
         if not candidates:
             # Fallback: get all communities at this level
             candidates = self.community_service.get_community_summaries(
-                level=level, allowed_docs=allowed_docs
+                level=level, allowed_docs=allowed_docs, group_id=group_id
             )
 
         if not candidates:
             return []
 
-        # If document filtering is needed and we got results from vector search,
-        # apply document filter now
-        if allowed_docs is not None:
+        # If document or group filtering is needed and we got results from vector search,
+        # apply filter now
+        if allowed_docs is not None or group_id is not None:
+            target_db = f"group_{group_id}" if group_id is not None else None
             filtered = []
             for c in candidates:
                 comm_id = c.get("id", "")
-                # Check if any entity in this community belongs to allowed docs
+                # Check if any entity in this community belongs to allowed docs or group_id
                 check_result = self.graph_store.query("""
-                MATCH (e:Entity)-[:BELONGS_TO]->(c:Community {id: $comm_id})
-                WHERE any(doc IN e.source_documents WHERE doc IN $allowed_docs)
+                MATCH (e:Entity)-[r:BELONGS_TO]->(c:Community {id: $comm_id})
+                WHERE ($group_id IS NULL OR c.group_id = $group_id OR $group_id IN COALESCE(e.group_ids, []))
+                  AND ($allowed_docs IS NULL OR any(doc IN e.source_documents WHERE doc IN $allowed_docs))
                 RETURN count(e) AS cnt
-                """, {"comm_id": comm_id, "allowed_docs": allowed_docs})
+                """, {"comm_id": comm_id, "allowed_docs": allowed_docs, "group_id": group_id}, database=target_db)
                 if check_result and check_result[0]["cnt"] > 0:
                     filtered.append(c)
             candidates = filtered
@@ -239,8 +245,9 @@ class GlobalSearchService:
 
     # ── Map Phase ────────────────────────────────────────────────────────
 
-    def _map_community(self, query: str, community: Dict[str, Any]) -> str:
+    def _map_community(self, query: str, community: Dict[str, Any], group_id: Optional[int] = None) -> str:
         """Generate a partial answer from a single community's context."""
+        target_db = f"group_{group_id}" if group_id is not None else None
         comm_id = community.get("id", "")
         title = community.get("title", "")
         summary = community.get("summary", "")
@@ -263,7 +270,7 @@ class GlobalSearchService:
         MATCH (e:Entity)-[:BELONGS_TO]->(c:Community {id: $comm_id})
         RETURN e.id AS id, e.type AS type, e.description AS description
         LIMIT 20
-        """, {"comm_id": comm_id})
+        """, {"comm_id": comm_id}, database=target_db)
 
         entities_text = "\n".join(
             f"- {e['id']} ({e['type']}): {e['description']}" for e in entities_result
@@ -277,7 +284,7 @@ class GlobalSearchService:
         WHERE NOT type(r) = 'BELONGS_TO'
         RETURN e1.id AS source, type(r) AS rel, e2.id AS target, r.description AS description
         LIMIT 30
-        """, {"comm_id": comm_id})
+        """, {"comm_id": comm_id}, database=target_db)
 
         rels_text = "\n".join(
             f"- {r['source']} -[{r['rel']}]-> {r['target']}: {r.get('description', '')}"

@@ -56,7 +56,7 @@ export default function SettingsModal({
         <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-200">
           <div className="flex items-center gap-2">
             <Sliders className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-lg font-semibold text-slate-900">Cấu Hình Hệ Thống</h2>
+            <h2 className="text-lg font-semibold text-slate-900">System Settings</h2>
           </div>
           <button
             onClick={onClose}
@@ -74,19 +74,19 @@ export default function SettingsModal({
             <div className="flex items-center justify-between text-slate-800 font-semibold">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4 text-indigo-600" />
-                <h3>Chỉ Thị Hệ Thống (System Instruction)</h3>
+                <h3>System Instruction</h3>
               </div>
-              <span title="Quy định vai trò, phong cách trả lời và định dạng phản hồi của mô hình AI.">
+              <span title="Defines the role, response style, and answer format for the AI model.">
                 <HelpCircle className="w-4 h-4 text-slate-400 hover:text-slate-600 transition cursor-help" />
               </span>
             </div>
 
             <p className="text-xs text-slate-500">
-              Thiết lập chỉ thị để định hình tính cách và hành vi phản hồi của trợ lý AI trước khi bắt đầu cuộc hội thoại.
+              Configure instructions to define the AI assistant's persona and response behavior before starting a conversation.
             </p>
 
             <textarea
-              placeholder="Ví dụ: Bạn là một trợ lý lập trình viên chuyên nghiệp, luôn viết code sạch, giải thích súc tích và sử dụng ngôn ngữ tiếng Việt lịch sự..."
+              placeholder="Example: You are a professional software engineering assistant who writes clean code, provides concise explanations..."
               value={systemInstruction}
               onChange={(e) => setSystemInstruction(e.target.value)}
               className="w-full h-24 bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition resize-none leading-relaxed"
@@ -98,14 +98,14 @@ export default function SettingsModal({
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-slate-800 font-semibold">
               <Sliders className="w-4 h-4 text-indigo-600" />
-              <h3>Tham Số Mô Hình (Hyperparameters)</h3>
+              <h3>Hyperparameters</h3>
             </div>
 
             {/* Temperature */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-750 font-medium">Độ Sáng Tạo (Temperature): {temperature.toFixed(1)}</span>
-                <span className="text-slate-400">Thấp = Chính xác | Cao = Sáng tạo</span>
+                <span className="text-slate-750 font-medium">Temperature: {temperature.toFixed(1)}</span>
+                <span className="text-slate-400">Low = Precise | High = Creative</span>
               </div>
               <input
                 type="range"
@@ -163,14 +163,14 @@ export default function SettingsModal({
             className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800 text-sm font-medium rounded-xl transition cursor-pointer shadow-sm"
             id="cancel-settings-btn"
           >
-            Hủy bỏ
+            Cancel
           </button>
           <button
             onClick={handleSave}
             className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition cursor-pointer"
             id="save-settings-btn"
           >
-            Lưu cấu hình
+            Save Settings
           </button>
         </div>
       </div>

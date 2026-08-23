@@ -37,7 +37,7 @@ def sanitize_tool_input(tool_input: Any) -> Any:
     return tool_input
 
 
-async def event_generator(messages: List[Message], group_id: Optional[int] = None):
+async def event_generator(messages: List[Message]):
     """Generator yielding Server-Sent Events (SSE) from the LangGraph agent."""
     from langchain_core.messages import HumanMessage, AIMessage
 
@@ -49,13 +49,12 @@ async def event_generator(messages: List[Message], group_id: Optional[int] = Non
         else:
             formatted_messages.append(AIMessage(content=msg.content))
 
-    logger.info(f"Invoking compiled agent graph with {len(formatted_messages)} messages and group_id: {group_id}")
+    logger.info(f"Invoking compiled agent graph with {len(formatted_messages)} messages")
 
     try:
         # Stream events token-by-token using LangChain astream_events
         async for event in get_compiled_graph().astream_events(
             {"messages": formatted_messages},
-            config={"configurable": {"group_id": group_id}},
             version="v2"
         ):
             kind = event.get("event")
@@ -176,8 +175,8 @@ async def event_generator(messages: List[Message], group_id: Optional[int] = Non
 @router.post("/api/chat/stream")
 async def chat_stream(req: ChatStreamRequest):
     """Exposes Server-Sent Events (SSE) streaming chat completions from the agent."""
-    logger.info(f"Received stream request. Model: {req.model or settings.llm_model}, Group ID: {req.groupId}")
+    logger.info(f"Received stream request. Model: {req.model or settings.llm_model}")
     return StreamingResponse(
-        event_generator(req.messages, group_id=req.groupId),
+        event_generator(req.messages),
         media_type="text/event-stream"
     )

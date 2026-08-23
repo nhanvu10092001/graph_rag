@@ -9,9 +9,11 @@ interface ToolCallBadgeProps {
 export const ToolCallBadge: React.FC<ToolCallBadgeProps> = ({ toolCall }) => {
   const [isOpen, setIsOpen] = useState(false);
 
+  if (!toolCall) return null;
+
   const formatToolName = (name?: string) => {
-    if (!name) return 'Đang khởi chạy công cụ...';
-    if (name === 'query_knowledge_graph') return 'Truy vấn Neo4j Knowledge Graph';
+    if (!name) return 'Launching tool...';
+    if (name === 'query_knowledge_graph') return 'Querying Neo4j Knowledge Graph';
     return name;
   };
 
@@ -38,10 +40,10 @@ export const ToolCallBadge: React.FC<ToolCallBadgeProps> = ({ toolCall }) => {
   const queryPreview = getQueryPreview();
 
   const statusConfig = {
-    completed: { label: 'Hoàn tất', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-    error: { label: 'Thất bại', color: 'text-rose-600 bg-rose-50 border-rose-100' },
-    calling: { label: 'Đang gọi', color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
-    executing: { label: 'Đang chạy', color: 'text-amber-600 bg-amber-50 border-amber-100' },
+    completed: { label: 'Completed', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+    error: { label: 'Failed', color: 'text-rose-600 bg-rose-50 border-rose-100' },
+    calling: { label: 'Calling', color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
+    executing: { label: 'Executing', color: 'text-amber-600 bg-amber-50 border-amber-100' },
   };
 
   const status = statusConfig[toolCall.status] || statusConfig.calling;
@@ -86,13 +88,13 @@ export const ToolCallBadge: React.FC<ToolCallBadgeProps> = ({ toolCall }) => {
       {isOpen && (
         <div className="px-3 py-2.5 border-t border-slate-100 bg-slate-50/50 font-mono text-[11px] text-slate-600 space-y-1.5">
           <div className="flex justify-between items-center text-slate-400 text-[10px] uppercase font-sans font-bold tracking-wider">
-            <span>Tham số đầu vào</span>
+            <span>Input Parameters</span>
             <span className="font-mono normal-case">{toolCall.id || toolCall.name || 'N/A'}</span>
           </div>
           <pre className="p-2.5 bg-slate-900 text-slate-200 rounded-lg overflow-x-auto whitespace-pre-wrap break-all leading-relaxed text-[10px]">
             {toolCall.input
               ? JSON.stringify(toolCall.input, null, 2)
-              : toolCall.args || '(Đang nhận tham số stream...)'}
+              : toolCall.args || '(Streaming arguments...)'}
           </pre>
         </div>
       )}

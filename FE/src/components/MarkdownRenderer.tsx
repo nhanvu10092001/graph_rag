@@ -126,17 +126,17 @@ function CodeBlock({ language, code }: CodeBlockProps) {
         <button
           onClick={handleCopy}
           className="flex items-center gap-1 hover:text-slate-850 transition cursor-pointer"
-          title="Sao chép mã"
+          title="Copy code"
         >
           {copied ? (
             <>
               <Check className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="text-indigo-600 font-medium">Đã chép</span>
+              <span className="text-indigo-600 font-medium">Copied</span>
             </>
           ) : (
             <>
               <Copy className="w-3.5 h-3.5" />
-              <span>Sao chép</span>
+              <span>Copy</span>
             </>
           )}
         </button>

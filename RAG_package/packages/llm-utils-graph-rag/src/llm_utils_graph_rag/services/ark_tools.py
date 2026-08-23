@@ -29,7 +29,6 @@ class GlobalSearchTool(BaseTool):
     args_schema: Type[BaseModel] = GlobalSearchInput
 
     graph_store: Neo4jGraphStore
-    allowed_docs: Optional[List[str]] = None
 
     def _run(self, subquery: str, k: int = 5, run_manager=None) -> str:
         sanitized_query = sanitize_lucene_query(subquery)
@@ -38,14 +37,12 @@ class GlobalSearchTool(BaseTool):
 
         cypher = """
         CALL db.index.fulltext.queryNodes('entity_fulltext', $search_phrase) YIELD node, score
-        WHERE ($allowed_docs IS NULL OR any(doc IN node.source_documents WHERE doc IN $allowed_docs))
         RETURN node.id AS id, node.type AS type, node.description AS description,
                node.source_documents AS source_documents, score
         LIMIT $k
         """
         params = {
             "search_phrase": sanitized_query,
-            "allowed_docs": self.allowed_docs,
             "k": k
         }
 
@@ -78,7 +75,6 @@ class NeighborhoodExplorationTool(BaseTool):
     args_schema: Type[BaseModel] = NeighborhoodExplorationInput
 
     graph_store: Neo4jGraphStore
-    allowed_docs: Optional[List[str]] = None
 
     def _run(
         self,
@@ -93,28 +89,15 @@ class NeighborhoodExplorationTool(BaseTool):
         if not sanitized_query:
             return "Subquery is empty after sanitization."
 
-        # Neo4j 5.x db.index.fulltext.queryNodes doesn't directly support graph traversal filtering easily in one go.
-        # Instead, we traverse, then compute a basic score (or rely on APOC string similarity).
-        # We can also do traversal and simple filtering, then rank in Python, OR try to use fulltext on neighbors.
-        # The simplest approach that strictly adheres to the paper is to traverse in Cypher,
-        # return the neighbors, and rank them. For simplicity and DB performance, we can just return
-        # the neighbors that match the text using CONTAINS or apoc.text.sorensenDiceSimilarity,
-        # but using python rank_bm25 is more robust and exact to the paper.
-        # Let's retrieve neighbors and optionally rank them in python or just return them.
-
-        # Let's fetch neighbors
         cypher = """
         MATCH (n:Entity {id: $node_id})-[r]-(m:Entity)
-        WHERE ($allowed_docs IS NULL OR any(doc IN r.source_documents WHERE doc IN $allowed_docs)
-               OR any(doc IN m.source_documents WHERE doc IN $allowed_docs))
-          AND ($filter_node_types IS NULL OR size($filter_node_types) = 0 OR m.type IN $filter_node_types)
+        WHERE ($filter_node_types IS NULL OR size($filter_node_types) = 0 OR m.type IN $filter_node_types)
           AND ($filter_edge_types IS NULL OR size($filter_edge_types) = 0 OR type(r) IN $filter_edge_types)
         RETURN DISTINCT m.id AS id, m.type AS type, m.description AS description,
                         type(r) AS rel_type, r.description AS rel_description
         """
         params = {
             "node_id": node_id,
-            "allowed_docs": self.allowed_docs,
             "filter_node_types": filter_node_types or [],
             "filter_edge_types": filter_edge_types or []
         }

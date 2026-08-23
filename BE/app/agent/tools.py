@@ -59,15 +59,39 @@ def _classify_search_mode(query: str) -> str:
     return "local"
 
 
+class QueryKnowledgeGraphInput(BaseModel):
+    """Input schema for the Knowledge Graph search tool."""
+
+    query: str = Field(
+        description=(
+            "A natural language question to search the Knowledge Graph. "
+            "Write a clear, specific question in plain language. "
+            "NEVER use Cypher, SQL, or any query syntax — the system handles that internally. "
+            "Examples: 'What companies did John Smith work for?', "
+            "'What are the main themes discussed across the documents?', "
+            "'How is entity A connected to entity B through intermediaries?'"
+        )
+    )
+    mode: str = Field(
+        default="auto",
+        description=(
+            "Search strategy to use. Choose based on the nature of the question:\n"
+            "- 'auto' (default): Let the system automatically classify and pick the best strategy.\n"
+            "- 'local': For questions about specific entities, facts, definitions, or direct 1-hop relationships. "
+            "Example: 'Who is the CEO of Acme Corp?', 'What is the capital of France?'\n"
+            "- 'global': For big-picture, thematic, or summary questions that span many documents. "
+            "Example: 'What are the major trends in the dataset?', 'Summarize the key findings across all reports.'\n"
+            "- 'ark': For complex multi-hop reasoning that requires tracing chains of relationships across multiple entities. "
+            "Example: 'How did company A's acquisition of B affect C's market position?', "
+            "'What is the connection path between person X and organization Y?'"
+        ),
+    )
+
+
 def query_knowledge_graph(
     query: str, mode: str = "auto", config: Optional[RunnableConfig] = None
 ) -> str:
-    """Queries the Neo4j Knowledge Graph using semantic search, relationship traversal,
-    and community-level global search for big-picture questions.
-
-    Use this tool to discover entities (e.g. facts, people, companies, locations), their descriptions,
-    relationships, and higher-level themes across the knowledge graph.
-    """
+    """Search the Knowledge Graph with a plain-language question."""
     services = get_services()
     cfg = services.graph_rag_config
     query_config = cfg.get("query", {})
@@ -78,22 +102,7 @@ def query_knowledge_graph(
 
     logger.info(f"Agent is querying Knowledge Graph for: '{query}'")
     try:
-        from app.database import SessionLocal
-        from app.models import Document
-
-        group_id = config.get("configurable", {}).get("group_id") if config else None
         allowed_docs = None
-
-        if group_id is not None:
-            db = SessionLocal()
-            try:
-                docs = db.query(Document).filter(Document.group_id == group_id).all()
-                allowed_docs = [doc.filename for doc in docs]
-                logger.info(
-                    f"Filtering Graph Query to group {group_id} documents: {allowed_docs}"
-                )
-            finally:
-                db.close()
 
         search_mode = default_search_mode if mode == "auto" else mode
         if search_mode == "auto":
@@ -162,6 +171,14 @@ def get_agent_tools():
     graph_rag_tool = StructuredTool.from_function(
         func=query_knowledge_graph,
         name="query_knowledge_graph",
-        description="Query the Neo4j Knowledge Graph to find specific entities, relationships, and corpus-wide themes.",
+        description=(
+            "Search the Knowledge Graph using a natural language question to find entities, "
+            "relationships, factual details, and corpus-wide themes. "
+            "Always write your question in plain language — NEVER use Cypher or any database query syntax. "
+            "Supports three search strategies via the 'mode' parameter: "
+            "'local' for specific entity lookups, 'global' for thematic summaries across documents, "
+            "and 'ark' for multi-hop relational reasoning. Use 'auto' (default) to let the system choose."
+        ),
+        args_schema=QueryKnowledgeGraphInput,
     )
     return [graph_rag_tool]

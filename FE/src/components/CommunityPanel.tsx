@@ -62,12 +62,12 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
         setListStatus('success');
       } else {
         const err = await res.json();
-        setErrorMessage(err.detail || 'Lỗi khi tải danh sách communities');
+        setErrorMessage(err.detail || 'Failed to load community list');
         setListStatus('error');
       }
     } catch (e) {
       console.error('Error fetching communities:', e);
-      setErrorMessage('Không thể kết nối đến server');
+      setErrorMessage('Cannot connect to server');
       setListStatus('error');
     }
   }, []);
@@ -90,12 +90,12 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
         await fetchCommunities(selectedLevel);
       } else {
         const err = await res.json();
-        setErrorMessage(err.detail || 'Community detection thất bại');
+        setErrorMessage(err.detail || 'Community detection failed');
         setDetectStatus('error');
       }
     } catch (e) {
       console.error('Error detecting communities:', e);
-      setErrorMessage('Không thể kết nối đến server');
+      setErrorMessage('Cannot connect to server');
       setDetectStatus('error');
     }
   };
@@ -113,18 +113,18 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
         await fetchCommunities(selectedLevel);
       } else {
         const err = await res.json();
-        setErrorMessage(err.detail || 'Tạo tóm tắt thất bại');
+        setErrorMessage(err.detail || 'Summary generation failed');
         setSummarizeStatus('error');
       }
     } catch (e) {
       console.error('Error summarizing communities:', e);
-      setErrorMessage('Không thể kết nối đến server');
+      setErrorMessage('Cannot connect to server');
       setSummarizeStatus('error');
     }
   };
 
   const handleRebuild = async () => {
-    if (!confirm('Thao tác này sẽ xóa toàn bộ communities cũ và xây dựng lại. Tiếp tục?')) return;
+    if (!confirm('This action will delete all existing communities and rebuild them. Continue?')) return;
     setRebuildStatus('loading');
     setLastAction('rebuild');
     setErrorMessage('');
@@ -137,12 +137,12 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
         await fetchCommunities(selectedLevel);
       } else {
         const err = await res.json();
-        setErrorMessage(err.detail || 'Rebuild thất bại');
+        setErrorMessage(err.detail || 'Rebuild failed');
         setRebuildStatus('error');
       }
     } catch (e) {
       console.error('Error rebuilding communities:', e);
-      setErrorMessage('Không thể kết nối đến server');
+      setErrorMessage('Cannot connect to server');
       setRebuildStatus('error');
     }
   };
@@ -161,22 +161,33 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
         setSearchStatus('success');
       } else {
         const err = await res.json();
-        setErrorMessage(err.detail || 'Tìm kiếm thất bại');
+        setErrorMessage(err.detail || 'Search failed');
         setSearchStatus('error');
       }
     } catch (e) {
       console.error('Error searching communities:', e);
-      setErrorMessage('Không thể kết nối đến server');
+      setErrorMessage('Cannot connect to server');
       setSearchStatus('error');
     }
   };
 
-  const parseFindingsJson = (findings: string): string[] => {
-    try {
-      return JSON.parse(findings);
-    } catch {
-      return findings ? [findings] : [];
+  const parseFindingsJson = (findings: any): string[] => {
+    if (!findings) return [];
+    if (Array.isArray(findings)) {
+      return findings.map((item) => (typeof item === 'string' ? item : JSON.stringify(item)));
     }
+    if (typeof findings === 'string') {
+      try {
+        const parsed = JSON.parse(findings);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => (typeof item === 'string' ? item : JSON.stringify(item)));
+        }
+        return [findings];
+      } catch {
+        return [findings];
+      }
+    }
+    return [];
   };
 
   const getImportanceColor = (score: number) => {
@@ -198,6 +209,9 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
   const renderCommunityCard = (community: Community, showScore = false) => {
     const isExpanded = expandedId === community.id;
     const findings = parseFindingsJson(community.findings);
+    const importanceScore = typeof community.importance_score === 'number' && !isNaN(community.importance_score)
+      ? community.importance_score
+      : 0;
 
     return (
       <div
@@ -215,16 +229,18 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
               <Network className="w-4 h-4 text-indigo-600" />
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="text-sm font-semibold text-slate-800 truncate">{community.title}</h4>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-slate-800 truncate">{community.title || 'Untitled Community'}</h4>
+              </div>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider font-mono border ${getImportanceColor(community.importance_score)}`}>
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider font-mono border ${getImportanceColor(importanceScore)}`}>
                   <BarChart3 className="w-2.5 h-2.5 mr-0.5" />
-                  {(community.importance_score * 100).toFixed(0)}%
+                  {(importanceScore * 100).toFixed(0)}%
                 </span>
                 <span className="text-[10px] text-slate-400 font-mono flex items-center gap-0.5">
-                  <Hash className="w-2.5 h-2.5" />{community.entity_count} entities
+                  <Hash className="w-2.5 h-2.5" />{community.entity_count ?? 0} entities
                 </span>
-                {showScore && community.score !== undefined && (
+                {showScore && typeof community.score === 'number' && !isNaN(community.score) && (
                   <span className="text-[10px] text-indigo-500 font-mono">
                     sim: {community.score.toFixed(3)}
                   </span>
@@ -239,18 +255,18 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
         {isExpanded && (
           <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
             <div>
-              <h5 className="text-[10px] font-bold text-slate-400 tracking-wider font-mono mb-1">TÓM TẮT</h5>
-              <p className="text-xs text-slate-600 leading-relaxed">{community.summary}</p>
+              <h5 className="text-[10px] font-bold text-slate-400 tracking-wider font-mono mb-1">SUMMARY</h5>
+              <p className="text-xs text-slate-600 leading-relaxed">{community.summary || 'No summary available.'}</p>
             </div>
 
-            {findings.length > 0 && (
+            {findings && findings.length > 0 && (
               <div>
-                <h5 className="text-[10px] font-bold text-slate-400 tracking-wider font-mono mb-1">PHÁT HIỆN CHÍNH</h5>
+                <h5 className="text-[10px] font-bold text-slate-400 tracking-wider font-mono mb-1">KEY FINDINGS</h5>
                 <ul className="space-y-1">
                   {findings.map((f, i) => (
                     <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
                       <Sparkles className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
-                      <span>{f}</span>
+                      <span>{typeof f === 'string' ? f : JSON.stringify(f)}</span>
                     </li>
                   ))}
                 </ul>
@@ -275,7 +291,7 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
           <button
             onClick={onBack}
             className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer border-0 bg-transparent"
-            title="Quay lại Chat"
+            title="Back to Chat"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -313,8 +329,8 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
                 )}
               </div>
               <div>
-                <span className="text-xs font-semibold">Phát hiện Communities</span>
-                <p className="text-[10px] text-slate-400 mt-0.5">Chạy thuật toán Leiden</p>
+                <span className="text-xs font-semibold">Detect Communities</span>
+                <p className="text-[10px] text-slate-400 mt-0.5">Run Leiden algorithm</p>
               </div>
               {detectStatus !== 'idle' && (
                 <div className="absolute top-2 right-2">{renderStatusIcon(detectStatus)}</div>
@@ -339,8 +355,8 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
                 )}
               </div>
               <div>
-                <span className="text-xs font-semibold">Tạo Tóm tắt</span>
-                <p className="text-[10px] text-slate-400 mt-0.5">LLM sinh summary cho mỗi nhóm</p>
+                <span className="text-xs font-semibold">Generate Summaries</span>
+                <p className="text-[10px] text-slate-400 mt-0.5">LLM generates summary for each community</p>
               </div>
               {summarizeStatus !== 'idle' && (
                 <div className="absolute top-2 right-2">{renderStatusIcon(summarizeStatus)}</div>
@@ -365,8 +381,8 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
                 )}
               </div>
               <div>
-                <span className="text-xs font-semibold">Xây dựng lại</span>
-                <p className="text-[10px] text-slate-400 mt-0.5">Xóa cũ → Detect → Summarize</p>
+                <span className="text-xs font-semibold">Rebuild All</span>
+                <p className="text-[10px] text-slate-400 mt-0.5">Delete old → Detect → Summarize</p>
               </div>
               {rebuildStatus !== 'idle' && (
                 <div className="absolute top-2 right-2">{renderStatusIcon(rebuildStatus)}</div>
@@ -384,7 +400,7 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
 
           {detectionStats && (
             <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-2">
-              <h4 className="text-[10px] font-bold text-indigo-400 tracking-wider font-mono">KẾT QUẢ THỰC THI</h4>
+              <h4 className="text-[10px] font-bold text-indigo-400 tracking-wider font-mono">EXECUTION RESULTS</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {Object.entries(detectionStats).map(([key, value]) => {
                   if (typeof value === 'object') return null;
@@ -427,7 +443,7 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
               <Search className="w-4 h-4 text-slate-400 shrink-0" />
               <input
                 type="text"
-                placeholder="Tìm kiếm community theo nội dung..."
+                placeholder="Search communities by content..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -439,7 +455,7 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
                 className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition cursor-pointer border-0 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
               >
                 {searchStatus === 'loading' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
-                Tìm
+                Search
               </button>
             </div>
           </div>
@@ -449,7 +465,7 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
             <div className="space-y-2">
               <h3 className="text-[10px] font-bold text-indigo-400 tracking-wider font-mono flex items-center gap-1.5">
                 <Search className="w-3.5 h-3.5" />
-                KẾT QUẢ TÌM KIẾM ({searchResults.length})
+                SEARCH RESULTS ({searchResults.length})
               </h3>
               <div className="space-y-2">
                 {searchResults.map((c) => renderCommunityCard(c, true))}
@@ -462,7 +478,7 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
             <div className="flex items-center justify-between">
               <h3 className="text-[10px] font-bold text-slate-400 tracking-wider font-mono flex items-center gap-1.5">
                 <Network className="w-3.5 h-3.5" />
-                COMMUNITIES TẠI LEVEL {selectedLevel} ({communities.length})
+                COMMUNITIES AT LEVEL {selectedLevel} ({communities.length})
               </h3>
               {listStatus === 'loading' && <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />}
             </div>
@@ -472,8 +488,8 @@ export default function CommunityPanel({ onBack }: CommunityPanelProps) {
                 <div className="p-4 bg-slate-100 rounded-2xl mb-3">
                   <Network className="w-8 h-8 text-slate-300" />
                 </div>
-                <p className="text-sm text-slate-400 font-medium">Chưa có community nào</p>
-                <p className="text-xs text-slate-300 mt-1">Nhấn "Phát hiện Communities" để bắt đầu</p>
+                <p className="text-sm text-slate-400 font-medium">No communities found</p>
+                <p className="text-xs text-slate-300 mt-1">Click 'Detect Communities' to start</p>
               </div>
             ) : (
               <div className="space-y-2">

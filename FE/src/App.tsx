@@ -11,9 +11,9 @@ import SettingsModal from './components/SettingsModal';
 import { ChatSession, Message, ModelConfig, ToolCallState } from './types';
 
 const DEFAULT_SYSTEM_INSTRUCTION =
-  "Bạn là một Trợ lý AI cao cấp chuyên nghiệp, lịch sự và đáng tin cậy. " +
-  "Hãy cung cấp câu trả lời rõ ràng, chính xác, cấu trúc mạch lạc sử dụng định dạng Markdown " +
-  "và viết bằng tiếng Việt tự nhiên trừ khi người dùng yêu cầu ngôn ngữ khác.";
+  "You are a professional, polite, and reliable AI assistant. " +
+  "Provide clear, accurate, well-structured answers using Markdown format " +
+  "and write in natural English unless the user requests a different language.";
 
 const DEFAULT_CONFIG: ModelConfig = {
   systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
@@ -36,15 +36,12 @@ export default function App() {
 
   const [documents, setDocuments] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [groups, setGroups] = useState<any[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchDocuments = async () => {
     try {
-      const url = selectedGroupId ? `/api/documents?group_id=${selectedGroupId}` : '/api/documents';
-      const res = await fetch(`${API_BASE}${url}`);
+      const res = await fetch(`${API_BASE}/api/documents`);
       if (res.ok) {
         const data = await res.json();
         setDocuments(data);
@@ -54,74 +51,16 @@ export default function App() {
     }
   };
 
-  const fetchGroups = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/groups`);
-      if (res.ok) {
-        const data = await res.json();
-        setGroups(data);
-      }
-    } catch (e) {
-      console.error('Error fetching groups:', e);
-    }
-  };
-
-  const handleCreateGroup = async (name: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/groups`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      });
-      if (res.ok) {
-        const newGroup = await res.json();
-        await fetchGroups();
-        setSelectedGroupId(newGroup.id);
-      } else {
-        const err = await res.json();
-        alert(`Tạo nhóm thất bại: ${err.detail || 'Lỗi không xác định'}`);
-      }
-    } catch (e) {
-      console.error('Error creating group:', e);
-      alert('Gặp lỗi khi kết nối tạo nhóm!');
-    }
-  };
-
-  const handleDeleteGroup = async (id: number) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/groups/${id}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        await fetchGroups();
-        setSelectedGroupId(null);
-      } else {
-        const err = await res.json();
-        alert(`Xóa nhóm thất bại: ${err.detail || 'Lỗi không xác định'}`);
-      }
-    } catch (e) {
-      console.error('Error deleting group:', e);
-      alert('Gặp lỗi khi kết nối xóa nhóm!');
-    }
-  };
-
   useEffect(() => {
     fetchDocuments();
     const interval = setInterval(fetchDocuments, 5000);
     return () => clearInterval(interval);
-  }, [selectedGroupId]);
-
-  useEffect(() => {
-    fetchGroups();
   }, []);
 
   const handleUploadFile = async (file: File) => {
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', file);
-    if (selectedGroupId !== null) {
-      formData.append('group_id', selectedGroupId.toString());
-    }
     try {
       const res = await fetch(`${API_BASE}/api/documents/upload`, {
         method: 'POST',
@@ -131,11 +70,11 @@ export default function App() {
         await fetchDocuments();
       } else {
         const err = await res.json().catch(() => ({}));
-        alert(`Tải tài liệu lên thất bại: ${err.detail || 'Lỗi không xác định'}`);
+        alert(`Document upload failed: ${err.detail || 'Unknown error'}`);
       }
     } catch (e) {
       console.error('Error uploading document:', e);
-      alert('Lỗi kết nối khi tải tài liệu lên!');
+      alert('Connection error when uploading document!');
     } finally {
       setIsUploading(false);
     }
@@ -182,7 +121,7 @@ export default function App() {
   const handleNewSession = (): ChatSession => {
     const newSession: ChatSession = {
       id: crypto.randomUUID(),
-      title: 'Hội thoại mới',
+      title: 'New Conversation',
       messages: [],
       systemInstruction: config.systemInstruction,
       temperature: config.temperature,
@@ -225,7 +164,7 @@ export default function App() {
     if (!currentSession) {
       sessionToUse = {
         id: crypto.randomUUID(),
-        title: 'Hội thoại mới',
+        title: 'New Conversation',
         messages: [],
         systemInstruction: config.systemInstruction,
         temperature: config.temperature,
@@ -295,20 +234,19 @@ export default function App() {
             topP: config.topP,
             topK: config.topK,
           },
-          groupId: selectedGroupId,
         }),
         signal: controller.signal,
       });
 
       if (!response.ok) {
-        throw new Error('Không thể kết nối đến máy chủ API.');
+        throw new Error('Cannot connect to API server.');
       }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder('utf-8');
 
       if (!reader) {
-        throw new Error('Dữ liệu luồng không phản hồi.');
+        throw new Error('Stream data not responding.');
       }
 
       setSessions((prevSessions) => {
@@ -535,7 +473,7 @@ export default function App() {
                 m.id === assistantMessageId
                   ? {
                       ...m,
-                      content: error.message || 'Đã có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại.',
+                      content: error.message || 'An error occurred during processing. Please try again.',
                       error: true
                     }
                   : m
@@ -569,11 +507,11 @@ export default function App() {
         await fetchDocuments();
       } else {
         const err = await res.json().catch(() => ({}));
-        alert(`Xoá tài liệu thất bại: ${err.detail || 'Lỗi không xác định'}`);
+        alert(`Document deletion failed: ${err.detail || 'Unknown error'}`);
       }
     } catch (e) {
       console.error('Error deleting document:', e);
-      alert('Lỗi kết nối khi xoá tài liệu!');
+      alert('Connection error when deleting document!');
     }
   };
 
@@ -596,11 +534,6 @@ export default function App() {
         onUploadFile={handleUploadFile}
         onDeleteDocument={handleDeleteDocument}
         onRefreshDocuments={fetchDocuments}
-        groups={groups}
-        selectedGroupId={selectedGroupId}
-        onSelectGroup={setSelectedGroupId}
-        onCreateGroup={handleCreateGroup}
-        onDeleteGroup={handleDeleteGroup}
         onOpenCommunity={() => setActiveView('community')}
       />
 

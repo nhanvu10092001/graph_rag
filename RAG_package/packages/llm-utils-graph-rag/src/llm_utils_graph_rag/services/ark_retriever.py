@@ -53,8 +53,8 @@ class ArkRetriever(BaseRetriever):
         logger.info(f"Starting ARK Agent {agent_idx} for query: {query}")
 
         tools = [
-            GlobalSearchTool(graph_store=self.graph_store, allowed_docs=self.allowed_docs),
-            NeighborhoodExplorationTool(graph_store=self.graph_store, allowed_docs=self.allowed_docs),
+            GlobalSearchTool(graph_store=self.graph_store),
+            NeighborhoodExplorationTool(graph_store=self.graph_store),
             AddToAnswerTool(),
             FinishTool(),
         ]

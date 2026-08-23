@@ -34,9 +34,9 @@ class QueryService:
         query = context.get("query")
         if not query:
             raise ValueError("query is required")
-        collection_name = context.get("collection_name")
-        if not collection_name:
-            raise ValueError("collection_name is required")
+        group_id = context.get("group_id")
+        default_coll = f"group_{group_id}" if group_id is not None else "documents"
+        collection_name = context.get("collection_name") or default_coll
         return query, collection_name
 
     def _get_vector_provider(self, context: Dict[str, Any]) -> str:
@@ -44,21 +44,27 @@ class QueryService:
             "vector_store", {}
         ).get("provider", "qdrant")
 
-    def _build_filename_filter(self, context: Dict[str, Any]) -> dict:
+    def _build_metadata_filter(self, context: Dict[str, Any]) -> dict:
+        filter_dict = {}
         fn = context.get("filename", None)
-        return {"filename": fn} if fn is not None else {}
+        if fn is not None:
+            filter_dict["filename"] = fn
+        group_id = context.get("group_id", None)
+        if group_id is not None:
+            filter_dict["group_id"] = group_id
+        return filter_dict
 
     def _build_retriever(self, context, vectorstore, llm):
         """Build a (possibly combined) retriever from vs_id list."""
         retriever_config = self.config.get(
             "retriever", {"provider": "vector_store_retriever"}
         )
-        filename_filter = self._build_filename_filter(context)
+        metadata_filter = self._build_metadata_filter(context)
         combined = []
         vs_id_list = context.get("vs_id", [])
 
         if not vs_id_list:
-            metadata = {**filename_filter}
+            metadata = {**metadata_filter}
             retriever = RetrieverFactory.create_retriever(
                 config=retriever_config,
                 vectorstore=vectorstore,
@@ -68,7 +74,7 @@ class QueryService:
             combined.append(retriever)
         else:
             for vs_id_metadata in vs_id_list:
-                metadata = {**filename_filter}
+                metadata = {**metadata_filter}
                 if vs_id_metadata and vs_id_metadata.strip():
                     metadata["vs_id"] = vs_id_metadata
                 retriever = RetrieverFactory.create_retriever(

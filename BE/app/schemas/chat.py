@@ -14,4 +14,3 @@ class ChatStreamRequest(BaseModel):
     model: Optional[str] = None
     config: Optional[dict] = None
     apiKey: Optional[str] = None
-    groupId: Optional[int] = None

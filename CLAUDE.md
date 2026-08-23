@@ -156,7 +156,7 @@ cp .env.docker.example .env
 # Build and start all services in detached mode
 docker compose up --build -d
 ```
-All services (PostgreSQL with pgvector, Neo4j, MinIO, FastAPI Backend, and React Frontend) will launch automatically.
+All services (PostgreSQL with pgvector, Neo4j, MinIO, nomic-embed-text-v1.5 via vLLM, PaddleOCR-VL via vLLM, FastAPI Backend, and React Frontend) will launch automatically.
 
 ### 2. Local Development Setup
 

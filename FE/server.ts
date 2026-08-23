@@ -19,7 +19,7 @@ async function startServer() {
 
   // 1. API: Check configuration status
   app.get("/api/config", async (req, res) => {
-    if (process.env.OPENAI_API_KEY) {
+    if (process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY) {
       return res.json({
         hasSystemKey: true,
       });
@@ -34,55 +34,21 @@ async function startServer() {
     }
   });
 
-  // 2. API: Verify custom or system API key
+  // 2. API: Verify custom or system API key (delegate to backend)
   app.post("/api/verify-key", async (req, res) => {
     try {
-      const { apiKey } = req.body;
-      const keyToUse = apiKey || process.env.OPENAI_API_KEY;
-
-      if (!keyToUse) {
-        // Forward to backend
-        try {
-          const response = await fetch(`${BACKEND_URL}/api/verify-key`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(req.body),
-          });
-          const data = await response.json();
-          return res.json(data);
-        } catch (e: any) {
-          return res.status(400).json({ valid: false, message: `Backend connection error: ${e.message}` });
-        }
-      }
-
-      // Initialize client and run a minimal test query against OpenAI
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      const response = await fetch(`${BACKEND_URL}/api/verify-key`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${keyToUse}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: "test" }],
-          max_tokens: 5
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body),
       });
-
-      if (response.ok) {
-        return res.json({ valid: true, message: "API Key is valid!" });
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        return res.status(400).json({
-          valid: false,
-          message: errData?.error?.message || "No response from OpenAI API."
-        });
-      }
-    } catch (error: any) {
-      console.error("API Key validation error:", error);
+      const data = await response.json();
+      return res.json(data);
+    } catch (e: any) {
+      console.error("API Key validation error:", e);
       return res.status(400).json({
         valid: false,
-        message: error.message || "An error occurred while validating the API Key."
+        message: `Backend connection error: ${e.message}`,
       });
     }
   });

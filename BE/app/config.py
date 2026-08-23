@@ -1,5 +1,6 @@
 """Unified configuration manager loading from .env and graph_rag_config.yaml."""
 
+import copy
 import logging
 import os
 import yaml
@@ -165,6 +166,15 @@ class Settings:
             llm_config["openai_api_key"] = self.openai_api_key or None
             llm_config["openai_api_base"] = self.openai_api_base or None
 
+        # Extraction / OCR config overrides
+        extraction_cfg = copy.deepcopy(self.raw.get("extraction", {}))
+        paddle_url = os.getenv("PADDLE_OCR_API_URL") or os.getenv("OCR_PADDLE_API_URL")
+        if paddle_url:
+            ocr_cfg = extraction_cfg.setdefault("ocr", {})
+            paddle_cfg = ocr_cfg.setdefault("paddle", {})
+            paddle_cfg["api_url"] = paddle_url
+            paddle_cfg["base_url"] = paddle_url
+
         return {
             "neo4j": {
                 "uri": self.neo4j_uri,
@@ -203,7 +213,7 @@ class Settings:
                     "global_search": {"max_communities": 10, "default_level": 0},
                 },
             ),
-            "extraction": self.raw.get("extraction", {}),
+            "extraction": extraction_cfg,
             "subagents": self.raw.get("subagents", {"enabled": True, "agents": []}),
             "ark": self.raw.get("ark", {}),
             "chunking": self.raw.get("chunking", {}),

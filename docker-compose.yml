@@ -20,7 +20,7 @@ services:
       - graph_rag_net
 
   minio:
-    image: minio/minio:RELEASE.2024-01-18T22-51-28Z
+    image: minio/minio:latest
     container_name: graph_rag_minio
     restart: unless-stopped
     ports:

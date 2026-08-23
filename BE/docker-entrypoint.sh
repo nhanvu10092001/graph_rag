@@ -21,4 +21,4 @@ echo "Database migrations completed successfully."
 
 # Start FastAPI Uvicorn server
 echo "Starting FastAPI server..."
-exec uvicorn main:app --host "${SERVER_HOST:-0.0.0.0}" --port "${SERVER_PORT:-8000}"
+exec uvicorn app.main:app --host "${SERVER_HOST:-0.0.0.0}" --port "${SERVER_PORT:-8000}"

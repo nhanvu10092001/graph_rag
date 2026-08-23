@@ -4,6 +4,7 @@ import logging
 import os
 import uvicorn
 from app.config import settings
+from app.main import app
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

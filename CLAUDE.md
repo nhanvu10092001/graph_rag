@@ -1,44 +1,74 @@
 # CLAUDE.md
 
+## Agent Rules & Workflow
+- **Before Starting Any Task**: The agent MUST read `CLAUDE.md` first to gain a complete understanding of the project overview, architecture, directory structure, technology stack, and existing conventions before taking action.
+- **After Completing Any Task**: The agent MUST update `CLAUDE.md` if the task introduced changes to architecture, packages/dependencies, configuration, setup/run commands, directory structure, or project conventions, ensuring future sessions remain accurate and up to date.
+
+---
+
 ## Project Overview
-**HLG LLM Utils** is a modular LLM framework with a plugin-based architecture for building AI applications. It is structured as a Python monorepo using **uv workspaces**, containing 8 core packages and an additional agent tool library.
+**HLG LLM Utils** is a modular, high-performance Graph RAG and multi-agent AI application framework. It is structured as a Python monorepo managed via **uv workspaces**, comprising **10 packages** (9 workspace member packages and 1 standalone agent tool library), alongside a FastAPI backend application and a React 19 / Vite 6 frontend interface.
+
 ---
 
 ## Architecture Summary
-The project follows a decoupling strategy, separating core utilities, LLM integration, vector stores, RAG functionality, and multi-agent coordination into separate packages:
 
+### Monorepo Packages Overview
 ```
-                  ┌──────────────────┐
-                  │  llm-utils-core  │
-                  └────────┬─────────┘
-                           │ (Plugin Base & Loader)
-                           ▼
- ┌─────────────────┬───────────────┬────────────────┐
- │ llm-utils-llm   │ llm-utils-vec │ llm-utils-sub  │
- └─────────────────┼───────────────┼────────────────┘
-                   │               │
-                   ▼               ▼
-         ┌──────────────────┐  ┌──────────────────┐
-         │  llm-utils-rag   │  │  llm-utils-mcp   │
-         └──────────────────┘  └──────────────────┘
-                   │
-                   ▼
-         ┌──────────────────┐
-         │llm-utils-graph-rag│
-         └──────────────────┘
+                         ┌──────────────────┐
+                         │  llm-utils-core  │
+                         └────────┬─────────┘
+                                  │ (Plugin Base & Loader)
+                                  ▼
+ ┌────────────────┬───────────────┬────────────────┬─────────────────┐
+ │ llm-utils-llm  │ llm-utils-vec │ llm-utils-parse│llm-utils-rerank │
+ └────────────────┼───────────────┼────────────────┴─────────────────┘
+                  │               │
+                  ▼               ▼
+        ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+        │  llm-utils-rag   │  │  llm-utils-sub   │  │  llm-utils-mcp   │
+        └────────┬─────────┘  └──────────────────┘  └──────────────────┘
+                 │
+                 ▼
+        ┌──────────────────┐  ┌───────────────────────┐
+        │llm-utils-graph-rag│  │ agent_tool_packages   │
+        └──────────────────┘  └───────────────────────┘
 ```
 
-1. **`llm-utils-core`**: Defines the base plugin interface (`TaskPlugin`) and handles dynamic loading of plugins using Python entry points.
-2. **`llm-utils-llm`**: Factory implementations (`LLMFactory`, `EmbeddingsFactory`) for language models and embedding models, primarily supporting OpenAI.
-3. **`llm-utils-vector`**: Decoupled interface (`VectorStoreProvider`) and concrete implementations for vector search databases, specifically `Qdrant` and `PostgreSQL (pgvector)`.
-4. **`llm-utils-rag`**: End-to-end Retrieval-Augmented Generation capabilities. Contains specific services (`IndexingService`, `QueryService`, `DeletionService`) and complex retrieval features (BM25, hybrid retrieval, query transforms, reranking, and adaptive routing).
-5. **`llm-utils-graph-rag`**: Graph RAG capabilities built using **Neo4j** and **LangGraph**, enabling entity/relationship extraction, Cypher query generation with auto-correction, hybrid search, **Leiden community detection** (hierarchical), **LLM-powered community summaries**, and **global search** (map-reduce over communities). Supports auto search mode routing (local vs global).
-6. **`llm-utils-subagent`**: Framework for creating coordinate-ready subagents. Supports:
-   - **Simple Subagents**: Single prompt-response LLM calls.
-   - **ReAct Subagents**: Loops with access to custom tools.
-   - **Graph Subagents**: Structured multi-step pipelines built on top of state graphs.
-7. **`llm-utils-mcp`**: Server/client implementations for Model Context Protocol (MCP), exposing local tools/exporters to FastMCP, LangChain structured tools, and LangChain MCP adapters.
-8. **`agent_tool_packages`**: A standalone tool library (`agent-tool-library`) implementing standard utility tools (weather, time, web search, OCR, image processing) compatible with LangChain.
+1. **`llm-utils-core`**: Defines plugin base interfaces (`TaskPlugin`) and dynamic loader logic via Python entry points.
+2. **`llm-utils-llm`**: Model provider factory (`LLMFactory`, `EmbeddingsFactory`) for OpenAI and Anthropic models.
+3. **`llm-utils-vector`**: Provider implementations for vector stores, including Qdrant and PostgreSQL (`pgvector`).
+4. **`llm-utils-parser`**: Multi-format document parser supporting PDF (PyMuPDF), Office documents, code files, and OCR engine integrations (Tesseract, PaddleOCR, DeepSeek, Docling).
+5. **`llm-utils-reranker`**: Second-stage reranking capabilities including FlashRank, CrossEncoder, and LLM-based rerankers.
+6. **`llm-utils-rag`**: Core RAG package providing `IndexingService`, `QueryService`, `DeletionService`, BM25/hybrid search, query rewriting, and adaptive retrieval.
+7. **`llm-utils-graph-rag`**: Neo4j and LangGraph-backed Graph RAG package with entity/relationship extraction, self-correcting Cypher query generation, hierarchical Leiden/Louvain community detection, LLM community summaries, map-reduce global search, and ARK (Adaptive Retriever of Knowledge).
+8. **`llm-utils-subagent`**: Wrapper framework for building stateless subagents:
+   - **Simple Subagents**: Direct prompt-response execution.
+   - **ReAct Subagents**: Tool-calling execution loop.
+   - **Graph Subagents**: Multi-step state graph execution workflows.
+9. **`llm-utils-mcp`**: Model Context Protocol (MCP) server, FastMCP integrations, and OpenAPI transformation utilities.
+10. **`agent_tool_packages`**: Standalone tool library (`agent-tool-library`) implementing utility tools (web search, time, weather, OCR, media processing) compatible with LangChain.
+
+### Backend Architecture (`BE/`)
+- **Agent Subsystem (`BE/app/agent/`)**:
+  - `graph.py`: Main LangGraph agent state machine executing multi-turn workflows and invoking tools.
+  - `llm.py`: Unified LLM factory supporting Anthropic and OpenAI backends.
+  - `security.py`: Guardrail engine checking for prompt injection, jailbreak attempts, and malicious input.
+  - `tools.py`: LangChain structured tool declarations exposing Graph RAG query modes (`auto`, `local`, `global`, `ark`).
+- **Services Layer (`BE/app/services/`)**:
+  - `registry.py`: Thread-safe, lazy-initialized singleton manager (`GraphRAGServiceRegistry`) managing shared Graph RAG service lifecycle.
+  - `document_service.py`: Manages PostgreSQL document metadata and async background processing pipelines.
+  - `file_storage.py`: Handles raw file upload storage and retrieval using MinIO S3 object storage.
+
+### Frontend Architecture (`FE/`)
+- **Stack**: React 19, TypeScript 5.8, Vite 6, Tailwind CSS v4, Express 4 server (`server.ts` proxying API and WebSocket traffic to FastAPI).
+- **Core Components**:
+  - `ThinkingPanel.tsx`: Displays model reasoning and step-by-step thinking output.
+  - `ToolCallBadge.tsx` & `ToolCallGroup.tsx`: Renders tool execution progress and call arguments.
+  - `CommunityPanel.tsx`: Interactive viewer for Leiden community detection hierarchies and summaries.
+  - Custom Modals: Confirmation dialogs for document deletion and group management.
+  - KaTeX & Markdown: Math notation rendering (`rehype-katex`, `remark-math`) and formatted markdown rendering.
+- **Verification**: Node Playwright scripts (`verify_chat.cjs`, `verify_custom_modals.cjs`, `verify_groups.cjs`, `test_group_api.cjs`) for E2E validation.
 
 ---
 
@@ -47,178 +77,135 @@ The project follows a decoupling strategy, separating core utilities, LLM integr
 graph_rag/
 ├── BE/                            # Backend FastAPI Application
 │   ├── app/                       # Application source package
-│   │   ├── services/              # Business logic & storage services
-│   │   ├── routers/               # FastAPI routers (chat, config, documents, community)
-│   │   ├── database.py            # SQLAlchemy session setup
-│   │   ├── models.py              # Database models (e.g. Document, Group)
-│   │   ├── parser.py              # File parsing & text extraction
-│   │   └── agent.py               # LangGraph agent & tool calling config
-│   ├── alembic/                   # Database schema migrations
-│   ├── alembic.ini                # Alembic settings
-│   ├── main.py                    # Root bootstrapper script
-│   └── requirements.txt           # Backend python dependencies
-├── FE/                            # Frontend Web Application (React + Vite)
-├── RAG_package/                   # Monorepo packages container
-│   ├── Makefile                   # Developer shortcuts for demos and setup
-│   ├── pyproject.toml             # UV workspace and dependencies configuration
-│   ├── setup.py                   # Legacy setup script
-│   ├── uv.lock                    # Dependency lockfile
-│   └── packages/                  # Workspace package members
-│       ├── llm-utils-core/        # Plugin contracts and plugin loader
-│       ├── llm-utils-llm/         # LLM/Embeddings factory (OpenAI)
-│       ├── llm-utils-vector/      # Qdrant and PGVector providers
-│       ├── llm-utils-rag/         # Query/Indexing services, hybrid search, RAG plugin
-│       ├── llm-utils-graph-rag/   # Graph RAG using Neo4j and LangGraph
-│       ├── llm-utils-subagent/    # Stateless subagent wrapper (simple, react, graph)
-│       ├── llm-utils-mcp/         # MCP server, adapters, and exporters
-│       ├── llm-utils-parser/      # Document parser and text extraction package
-│       └── agent_tool_packages/   # General-purpose agent tool library (standalone)
+│   │   ├── agent/                 # LangGraph Agent & Guardrails Engine
+│   │   │   ├── graph.py           # LangGraph workflow definition & state graph
+│   │   │   ├── llm.py             # LLM provider factory (Anthropic / OpenAI)
+│   │   │   ├── security.py        # Security & prompt injection guardrails
+│   │   │   └── tools.py           # Graph RAG structured tools (auto/local/global/ark)
+│   │   ├── services/              # Application logic & service registry
+│   │   │   ├── registry.py        # Thread-safe lazy Graph RAG service registry
+│   │   │   ├── document_service.py# Document metadata & background indexing
+│   │   │   └── file_storage.py    # MinIO S3 object storage service
+│   │   ├── routers/               # FastAPI route definitions (chat, config, docs, community)
+│   │   ├── schemas/               # Pydantic request/response models
+│   │   ├── config.py              # Configuration manager & YAML parser
+│   │   ├── database.py            # SQLAlchemy database sessions
+│   │   └── models.py              # ORM models (Document, Group, etc.)
+│   ├── alembic/                   # PostgreSQL schema migration scripts
+│   ├── graph_rag_config.yaml      # Unified system configuration file
+│   ├── main.py                    # FastAPI server entry point
+│   └── requirements.txt           # Python dependencies for BE
+├── FE/                            # Frontend Web Application
+│   ├── src/                       # React 19 source code
+│   │   ├── components/            # UI components (ThinkingPanel, CommunityPanel, etc.)
+│   │   └── App.tsx                # Main frontend application component
+│   ├── server.ts                  # Express 4 API & WebSocket proxy server
+│   ├── verify_chat.cjs            # Chat E2E test script
+│   ├── verify_custom_modals.cjs   # Deletion modal verification script
+│   ├── verify_groups.cjs          # Group API test script
+│   ├── package.json               # Node.js dependencies & scripts
+│   └── vite.config.ts             # Vite build configuration
+├── RAG_package/                   # Monorepo Workspace Container
+│   ├── Makefile                   # Makefile shortcuts for demos and environment setup
+│   ├── pyproject.toml             # UV workspace configuration
+│   ├── packages/                  # Workspace Member Packages
+│   │   ├── llm-utils-core/        # Plugin base & loader
+│   │   ├── llm-utils-llm/         # LLM & Embeddings factory
+│   │   ├── llm-utils-vector/      # Qdrant & PGVector providers
+│   │   ├── llm-utils-parser/      # Multi-format parser & OCR package
+│   │   ├── llm-utils-reranker/    # Reranking engines (FlashRank, CrossEncoder, LLM)
+│   │   ├── llm-utils-rag/         # Traditional RAG, hybrid search & services
+│   │   ├── llm-utils-graph-rag/   # Neo4j Graph RAG, Leiden community detection & ARK
+│   │   ├── llm-utils-subagent/    # Simple, ReAct, and Graph subagents
+│   │   ├── llm-utils-mcp/         # MCP server, adapters & OpenAPI generator
+│   │   └── agent_tool_packages/   # Standalone general agent tools library
+│   └── uv.lock                    # Monorepo lockfile
 ├── .agents/                       # Agent rule sets & customizations
-└── README.md                      # General repository introduction
+└── README.md                      # General repository documentation
 ```
-
 
 ---
 
 ## Technology Stack
-- **Language**: Python >= 3.9 (workspace set up for Python 3.9, tool package requires Python >= 3.10)
-- **Monorepo Manager**: [uv](https://docs.astral.sh/uv/) Workspaces
-- **AI Framework**: LangChain (Core, OpenAI adapters, adapters for MCP)
-- **State Machine**: LangGraph (used for ReAct agents, custom graph subagents, and Cypher self-correction)
-- **Databases**: Qdrant (Vector Store), PostgreSQL with `pgvector`, Neo4j (Graph Store)
-- **Graph Analysis**: igraph + leidenalg (Python Leiden community detection fallback)
-- **Web API**: FastAPI, Uvicorn, MCPO (OpenAPI generator for MCP)
+- **Languages**: Python >= 3.9 (BE / Monorepo), TypeScript 5.8 & Node.js (FE)
+- **Monorepo Manager**: [uv Workspaces](https://docs.astral.sh/uv/)
+- **Frontend Engine**: React 19, Vite 6, Tailwind CSS v4, Express 4 (Proxy Server)
+- **AI & Graph Frameworks**: LangChain, LangGraph (State Graphs, ReAct loops), Neo4j Cypher auto-correction
+- **Databases & Storage**:
+  - **Vector Store**: Qdrant, PostgreSQL with `pgvector`
+  - **Graph Store**: Neo4j 5+
+  - **Relational DB**: PostgreSQL 12+ (Alembic migrations)
+  - **Object Storage**: MinIO S3-compatible storage
+- **Document Processing & Reranking**:
+  - **Parsers**: PyMuPDF, Docling, Office/Code parsers
+  - **OCR Engines**: Tesseract, PaddleOCR, DeepSeek OCR
+  - **Rerankers**: FlashRank, CrossEncoder, LLMReranker
+- **Graph Clustering**: `igraph` + `leidenalg` (Leiden algorithm) / Louvain
 
 ---
 
 ## Setup & Running Demos
 
-### 1. Basic Setup
+### 1. Workspace Installation
 ```bash
 cd RAG_package
 
-# Setup entire workspace (MCP, RAG, and Graph RAG packages with dev dependencies)
+# Install and link all packages in the uv workspace
 make setup-all
 ```
 
-### 2. Provider Prerequisites
-- **OpenAI**: Save API key in a `.env` file at the `RAG_package/` root:
-  ```env
-  OPENAI_API_KEY=sk-your-openai-api-key
-  ```
-- **Databases**:
-  - Run **Qdrant**: `docker run -p 6333:6333 qdrant/qdrant`
-  - Run **PostgreSQL**: Install PostgreSQL 12+ and activate the `pgvector` extension.
-  - Run **Neo4j**:
-    ```bash
-    docker run -d --name neo4j-rag -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest
-    ```
-    Add connection info to `.env`:
-    ```env
-    NEO4J_URI=bolt://localhost:7687
-    NEO4J_USERNAME=neo4j
-    NEO4J_PASSWORD=password
-    ```
-
-### 3. Demo Commands
+### 2. Infrastructure Setup (Docker Services)
+Start PostgreSQL, Neo4j, and MinIO storage services:
 ```bash
-# Start a simple FastMCP Calculator Server (port 8000)
-make run-fastmcp
-
-# Start a simple FastMCP Server with basic utility tools (port 8000)
-make simple-fastmcp
-
-# Start a FastMCP Server with 20+ file-based MCP-IO tools (port 8002)
-make mcp-io-demo
-
-# Start a FastMCP Server with RAG indexing and querying tools (port 8003)
-make rag-mcp-demo
-
-# Start a HTTP-based RAG document indexing API (port 9999)
-make rag-indexing-api
-
-# Run standard RAG interactive console demo
-make test-rag
-
-# Run Neo4j Graph RAG interactive console demo
-make run-graph-rag-demo
-
-# Run a LangChain conversational agent connected to MCP tools
-make langchain-mcp-demo
-
-# Convert an active MCP server's tools to an OpenAPI server (port 8001)
-make cvt-fastmcp-2-openapi
+docker start graph_rag_postgres graph_rag_neo4j graph_rag_minio
+```
+Or initialize Neo4j manually:
+```bash
+docker run -d --name neo4j-rag -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest
 ```
 
-### 4. Main Application (FE & BE)
-- **Start Database & Storage Services (Docker)**:
-  ```bash
-  docker start graph_rag_postgres graph_rag_neo4j graph_rag_minio
-  ```
-- **Start Backend API (FastAPI - Port 8000)**:
+### 3. Application Launch Commands
+
+- **Backend Server (FastAPI on Port 8000)**:
   ```bash
   cd BE
   uv run alembic upgrade head
   uv run python main.py
   ```
-- **Start Frontend UI (Express/Vite - Port 3000)**:
+
+- **Frontend Application (Express / Vite on Port 3000)**:
   ```bash
   cd FE
-  # Copy .env.example to .env and configure GEMINI_API_KEY if needed
   cp .env.example .env
   npm run dev
   ```
-- **Run Chat/Security Verification Tests (Playwright)**:
+
+- **Frontend Verification Scripts**:
   ```bash
   cd FE
   node verify_chat.cjs
-  ```
-- **Run Group and Modal Deletion E2E Tests (Playwright)**:
-  ```bash
-  cd FE
   node verify_custom_modals.cjs
+  node verify_groups.cjs
   ```
-
----
-
-## Development & Test Commands
-Navigate to the package or run from the workspace root:
-
-```bash
-# Run tests for the agent tools package
-cd packages/agent_tool_packages
-pytest tests/test_integration.py
-
-# Run tests for the Neo4j Graph RAG package
-cd packages/llm-utils-graph-rag
-pytest tests/test_graph_rag.py
-
-# Format code
-black .
-
-# Run linter
-ruff check .
-
-# Run static type checking
-mypy .
-```
 
 ---
 
 ## Configuration
 
-The Graph RAG system uses a unified configuration file at `BE/graph_rag_config.yaml`. Key sections:
-- **`graph_rag`**: Neo4j connection, entity/relationship extraction prompts, embeddings
-- **`reranking`**: Reranker type, model, top_k settings
-- **`community_detection`**: Leiden algorithm config (enabled, resolution, max_levels, auto_rebuild)
-- **`query`**: Search mode (`auto`/`local`/`global`), global search params (max_communities, default_level)
-- **`chunking`**: Chunk size, overlap, strategy
-- **`parsing`**: Parser type (llm, marker, tesseract), OCR model config
+The main configuration is located at `BE/graph_rag_config.yaml` (loaded via `BE/app/config.py`):
+- **`graph_rag`**: Neo4j connection parameters, extraction prompt templates, embedding models.
+- **`reranking`**: Active reranker engine selection (`flashrank`, `cross_encoder`, `llm`), model path, `top_k`.
+- **`community_detection`**: Leiden algorithm parameters (resolution, max depth levels, auto-rebuild flags).
+- **`query`**: Search mode configuration (`auto`, `local`, `global`, `ark`), community map-reduce thresholds.
+- **`chunking`**: Token size, overlap ratio, chunk strategy.
+- **`parsing`**: Parser selection, OCR engine configuration (Tesseract, PaddleOCR, DeepSeek).
+- **`storage`**: MinIO bucket name, endpoint, access credentials, PostgreSQL connection URI.
 
 ---
 
 ## Coding Conventions
-- **Dynamic Extensibility**: Rely on `TaskPlugin` class implementations for new actions. Dynamic package tools are registered via `llm_utils.plugins` entry points.
-- **Stateless Subagents**: The `SubagentTool` class wraps subagents (Simple, ReAct, Graph) and keeps them stateless by rebuilding the execution graph and fresh memory history on every single `run`/`arun` invocation.
-- **Service-Oriented Core**: Keep plugins thin. Delegate logic to dedicated services (e.g. `QueryService` / `GraphQueryService` for searching, `IndexingService` / `GraphIndexingService` for indexing, `DeletionService` for removal, `CommunityDetectionService` for community analysis, `GlobalSearchService` for map-reduce search).
-- **Type Hinting**: All new Python classes, methods, and functions must be properly typed.
+- **Dynamic Extensibility**: Rely on `TaskPlugin` class implementations for new actions. Dynamic package tools register via `llm_utils.plugins` entry points.
+- **Lazy Singleton Registry**: Backend services access core RAG components via `GraphRAGServiceRegistry` in `BE/app/services/registry.py` to ensure thread-safe single initialization.
+- **Stateless Subagents**: Subagents wrapped in `SubagentTool` must remain stateless by re-instantiating state graphs and memory history on every `run`/`arun` call.
+- **Service-Oriented Decoupling**: Keep routers and tools light by delegating query, indexing, community detection, and storage operations to specialized service classes.
+- **Strict Typing**: All new Python classes, methods, parameters, and return types must include complete type annotations.

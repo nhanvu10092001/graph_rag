@@ -1,0 +1,40 @@
+\babel@toc {vietnamese}{}\relax 
+\contentsline {chapter}{Tóm Tắt Báo Cáo}{i}{Doc-Start}%
+\contentsline {chapter}{\numberline {1}Giới Thiệu và Đặt Vấn Đề}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Bối Cảnh Nghiên Cứu}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Những Hạn Chế của Naive RAG}{1}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Động Cơ và Mục Tiêu Nghiên Cứu}{1}{section.1.3}%
+\contentsline {chapter}{\numberline {2}Cơ Sở Lý Thuyết và Các Nghiên Cứu Liên Quan}{3}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Các Mô Hình Biểu Diễn Tri Thức}{3}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Từ Mạng Ngữ Nghĩa đến Property Knowledge Graph}{3}{subsection.2.1.1}%
+\contentsline {section}{\numberline {2.2}Không Gian Vector và Truy Xuất Lai (Hybrid Retrieval)}{3}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Phân Hoạch Đồ Thị và Thuật Toán Leiden}{3}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Khung Microsoft GraphRAG và Khám Phá ARK}{4}{section.2.4}%
+\contentsline {chapter}{\numberline {3}Hình Thức Hóa Biểu Diễn Tri Thức và Thiết Kế Lược Đồ}{5}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Hình Thức Hóa Property Knowledge Graph}{5}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Lược Đồ Cơ Sở Dữ Liệu Neo4j (Graph Schema Design)}{5}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Quy Trình Trích Xuất Bộ Ba (Triplet Extraction Taxonomy)}{6}{section.3.3}%
+\contentsline {chapter}{\numberline {4}Kiến Trúc Hệ Thống và Thiết Kế Monorepo Modular}{7}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Tổng Quan Kiến Trúc UV Workspace}{7}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Phân Tích Chi Tiết Các Gói Core}{7}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Tích Hợp Backend (FastAPI) và Frontend (React)}{8}{section.4.3}%
+\contentsline {chapter}{\numberline {5}Các Thuật Toán Tìm Kiếm và Suy Luận Nâng Cao}{9}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Thuật Toán Phân Hoạch Leiden và Tóm Tắt Phân Cấp}{9}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Tìm Kiếm Toàn Cục Theo Mô Hình Map-Reduce}{9}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Máy Trạng Thái Tự Sửa Lỗi Truy Vấn Cypher (LangGraph)}{10}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Khám Phá Đồ Thị Đa Tác Thể ARK}{10}{section.5.4}%
+\contentsline {chapter}{\numberline {6}Cài Đặt Hệ Thống và Tích Hợp Kỹ Thuật}{11}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Tích Hợp Cơ Sở Dữ Liệu và Lưu Trữ Object}{11}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Tự Động Hóa Công Cụ Qua Model Context Protocol (MCP)}{11}{section.6.2}%
+\contentsline {chapter}{\numberline {7}Đánh Giá Thực Nghiệm và Phân Tích Kết Quả}{12}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Thiết Lập Thực Nghiệm và Tập Dữ Liệu}{12}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Kết Quả So Sánh Hiệu Năng}{12}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Phân Tích Kết Quả}{12}{section.7.3}%
+\contentsline {chapter}{\numberline {8}Thảo Luận, Thách Thức và Hướng Phát Triển}{14}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Thảo Luận Kết Quả}{14}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Những Thách Thức Kỹ Thuật}{14}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Hướng Phát Triển Trong Tương Lai}{14}{section.8.3}%
+\contentsline {chapter}{\numberline {9}Kết Luận và Phân Công Nhiệm Vụ}{15}{chapter.9}%
+\contentsline {section}{\numberline {9.1}Kết Luận}{15}{section.9.1}%
+\contentsline {section}{\numberline {9.2}Bảng Phân Công Nhiệm Vụ Nhóm}{15}{section.9.2}%
+\contentsline {chapter}{Tài Liệu Tham Khảo}{16}{table.9.1}%

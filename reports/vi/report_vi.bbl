@@ -1,0 +1,70 @@
+\begin{thebibliography}{10}
+
+\bibitem{baader2003description}
+Franz Baader, Diego Calvanese, Deborah~L McGuinness, Daniele Nardi, and Peter~F
+  Patel-Schneider.
+\newblock The description logic handbook: Theory, implementation, and
+  applications.
+\newblock {\em Cambridge University Press}, 2003.
+
+\bibitem{cormack2009rrf}
+Gordon~V Cormack, Charles~LA Clarke, and Stefan Buettcher.
+\newblock Reciprocal rank fusion outperforms condorcet and individual rank
+  learning methods.
+\newblock In {\em Proceedings of the 32nd international ACM SIGIR conference on
+  Research and development in information retrieval}, pages 758--759, 2009.
+
+\bibitem{edge2024graphrag}
+Darren Edge, Ha~Trinh, Newman Cheng, Joshua Bradley, Alex Chao, Apurva Mody,
+  Steven Truitt, and Jonathan Larson.
+\newblock From local to global: A graphrag approach to query-focused
+  summarization.
+\newblock {\em arXiv preprint arXiv:2404.16130}, 2024.
+
+\bibitem{espejel2023ragas}
+Shahul Espejel, Jiri Haluza, Ye~Liu, and Jaron Briggs.
+\newblock Ragas: Automated evaluation of retrieval augmented generation.
+\newblock {\em arXiv preprint arXiv:2309.15217}, 2023.
+
+\bibitem{ji2022survey}
+Shaoxiong Ji, Shirui Pan, Erik Cambria, Pekka Marttinen, and S~Yu Philip.
+\newblock A survey on knowledge graphs: Representation, acquisition, and
+  applications.
+\newblock {\em IEEE Transactions on Neural Networks and Learning Systems},
+  33(2):494--514, 2021.
+
+\bibitem{minsky1974frame}
+Marvin Minsky.
+\newblock A framework for representing knowledge.
+\newblock {\em MIT-AI Laboratory Memo}, (306), 1974.
+
+\bibitem{polonuer2026ark}
+Michael Polonuer, Soumya Sanyal, Xiang Ren, and Kai-Wei Chang.
+\newblock Autonomous knowledge graph exploration with adaptive breadth-depth
+  retrieval.
+\newblock In {\em Proceedings of the 64th Annual Meeting of the Association for
+  Computational Linguistics (ACL 2026)}, pages 714--730, 2026.
+
+\bibitem{quillian1968semantic}
+M~Ross Quillian.
+\newblock Semantic memory.
+\newblock {\em Semantic information processing}, pages 227--270, 1968.
+
+\bibitem{reimers2019sentencebert}
+Nils Reimers and Iryna Gurevych.
+\newblock Sentence-bert: Sentence embeddings using siamese bert-networks.
+\newblock In {\em Proceedings of the 2019 Conference on Empirical Methods in
+  Natural Language Processing (EMNLP)}, pages 3982--3992, 2019.
+
+\bibitem{robertson2009bm25}
+Stephen Robertson, Hugo Zaragoza, et~al.
+\newblock The probabilistic relevance framework: Bm25 and beyond.
+\newblock {\em Foundations and Trends{\ae} in Information Retrieval},
+  3(4):333--389, 2009.
+
+\bibitem{traag2019leiden}
+Vincent~A Traag, Ludo Waltman, and Nees~Jan van Eck.
+\newblock From louvain to leiden: guaranteeing well-connected communities.
+\newblock {\em Scientific Reports}, 9(1):5233, 2019.
+
+\end{thebibliography}

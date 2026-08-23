@@ -11,7 +11,8 @@ import "dotenv/config";
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  const BACKEND_URL = process.env.BACKEND_URL || "http://127.0.0.1:8000";
 
   // Middleware to parse JSON request bodies
   app.use(express.json());
@@ -25,7 +26,7 @@ async function startServer() {
     }
     // Forward to backend config
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/config");
+      const response = await fetch(`${BACKEND_URL}/api/config`);
       const data = await response.json();
       res.json(data);
     } catch (e) {
@@ -42,7 +43,7 @@ async function startServer() {
       if (!keyToUse) {
         // Forward to backend
         try {
-          const response = await fetch("http://127.0.0.1:8000/api/verify-key", {
+          const response = await fetch(`${BACKEND_URL}/api/verify-key`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(req.body),
@@ -72,23 +73,23 @@ async function startServer() {
         return res.json({ valid: true, message: "API Key is valid!" });
       } else {
         const errData = await response.json().catch(() => ({}));
-        return res.status(400).json({ 
-          valid: false, 
-          message: errData?.error?.message || "No response from OpenAI API." 
+        return res.status(400).json({
+          valid: false,
+          message: errData?.error?.message || "No response from OpenAI API."
         });
       }
     } catch (error: any) {
       console.error("API Key validation error:", error);
-      return res.status(400).json({ 
-        valid: false, 
-        message: error.message || "An error occurred while validating the API Key." 
+      return res.status(400).json({
+        valid: false,
+        message: error.message || "An error occurred while validating the API Key."
       });
     }
   });
 
   // 3. WebSocket proxy for chat streaming
   const wsProxy = createProxyMiddleware({
-    target: 'http://127.0.0.1:8000',
+    target: BACKEND_URL,
     ws: true,
     changeOrigin: true,
   });
@@ -97,7 +98,7 @@ async function startServer() {
   // 4. API: Get Documents List
   app.get("/api/documents", async (req, res) => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/documents");
+      const response = await fetch(`${BACKEND_URL}/api/documents`);
       const data = await response.json();
       res.json(data);
     } catch (e: any) {
@@ -108,7 +109,7 @@ async function startServer() {
   // 5. API: Delete Document
   app.delete("/api/documents/:id", async (req, res) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/documents/${req.params.id}`, {
+      const response = await fetch(`${BACKEND_URL}/api/documents/${req.params.id}`, {
         method: "DELETE"
       });
       const data = await response.json();
@@ -126,7 +127,7 @@ async function startServer() {
         headers["content-type"] = req.headers["content-type"];
       }
 
-      const response = await fetch("http://127.0.0.1:8000/api/documents/upload", {
+      const response = await fetch(`${BACKEND_URL}/api/documents/upload`, {
         method: "POST",
         headers,
         body: req as any,
@@ -148,8 +149,8 @@ async function startServer() {
       const queryParams = new URLSearchParams(req.query as any).toString();
       const targetPath = req.path || "";
       const targetUrl = queryParams
-        ? `http://127.0.0.1:8000/api/community${targetPath}?${queryParams}`
-        : `http://127.0.0.1:8000/api/community${targetPath}`;
+        ? `${BACKEND_URL}/api/community${targetPath}?${queryParams}`
+        : `${BACKEND_URL}/api/community${targetPath}`;
 
       const options: RequestInit = {
         method: req.method,

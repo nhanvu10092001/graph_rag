@@ -146,25 +146,33 @@ graph_rag/
 
 ## Setup & Running Demos
 
-### 1. Workspace Installation
+### 1. Full Stack Deployment (Docker Compose - Recommended)
+```bash
+# Copy environment configuration
+cp .env.docker.example .env
+
+# Edit .env to set your OPENAI_API_KEY or ANTHROPIC_API_KEY
+
+# Build and start all services in detached mode
+docker compose up --build -d
+```
+All services (PostgreSQL with pgvector, Neo4j, MinIO, Infinity Embedding, FastAPI Backend, and React Frontend) will launch automatically.
+
+### 2. Local Development Setup
+
+#### Infrastructure Setup (Docker Databases Only)
+Start PostgreSQL, Neo4j, and MinIO storage services:
+```bash
+docker compose up postgres neo4j minio -d
+```
+
+#### Workspace Installation
 ```bash
 cd RAG_package
-
-# Install and link all packages in the uv workspace
 make setup-all
 ```
 
-### 2. Infrastructure Setup (Docker Services)
-Start PostgreSQL, Neo4j, and MinIO storage services:
-```bash
-docker start graph_rag_postgres graph_rag_neo4j graph_rag_minio
-```
-Or initialize Neo4j manually:
-```bash
-docker run -d --name neo4j-rag -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest
-```
-
-### 3. Application Launch Commands
+#### Application Launch Commands
 
 - **Backend Server (FastAPI on Port 8000)**:
   ```bash

@@ -66,6 +66,33 @@ class DeepSeekOCR(BaseOCR):
                 "Install with: pip install openai"
             )
 
+    def extract_image_bytes(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
+        """Extract text from in-memory image bytes using DeepSeek vision model API."""
+        try:
+            client = self._get_client()
+            encoded = base64.b64encode(image_bytes).decode("utf-8")
+            image_url = f"data:{mime_type};base64,{encoded}"
+
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": self.prompt},
+                            {"type": "image_url", "image_url": {"url": image_url}},
+                        ],
+                    }
+                ],
+                max_tokens=self.max_tokens,
+            )
+
+            if response.choices and len(response.choices) > 0:
+                return response.choices[0].message.content or ""
+        except Exception as e:
+            logger.warning(f"DeepSeek OCR error on image bytes: {e}")
+        return ""
+
     def _encode_image(self, image_path: Path) -> str:
         """Encode image to base64."""
         with open(image_path, "rb") as f:

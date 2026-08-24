@@ -64,6 +64,33 @@ class PaddleOCRProvider(BaseOCR):
                 "Install with: pip install openai"
             )
 
+    def extract_image_bytes(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
+        """Extract text directly from in-memory image bytes using OpenAI-compatible Vision API."""
+        try:
+            client = self._get_client()
+            encoded = base64.b64encode(image_bytes).decode("utf-8")
+            image_url = f"data:{mime_type};base64,{encoded}"
+
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": self.prompt},
+                            {"type": "image_url", "image_url": {"url": image_url}},
+                        ],
+                    }
+                ],
+                timeout=self.timeout,
+            )
+
+            if response.choices and len(response.choices) > 0:
+                return response.choices[0].message.content or ""
+        except Exception as e:
+            logger.warning(f"Paddle OCR error extracting from image bytes: {e}")
+        return ""
+
     def _get_image_data_list(self, file_path: Path) -> List[str]:
         """Convert a file (image or PDF) into a list of base64 data URIs."""
         ext = file_path.suffix.lower()

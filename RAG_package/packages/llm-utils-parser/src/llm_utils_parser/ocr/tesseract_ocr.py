@@ -33,6 +33,19 @@ class TesseractOCR(BaseOCR):
         if self.tesseract_cmd:
             pytesseract.pytesseract.tesseract_cmd = self.tesseract_cmd
 
+    def extract_image_bytes(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
+        """Extract text from image bytes using Tesseract."""
+        import io
+        import pytesseract
+        from PIL import Image
+        self._setup_cmd()
+        try:
+            pil_img = Image.open(io.BytesIO(image_bytes))
+            return pytesseract.image_to_string(pil_img, lang=self.lang, config=self.config_options)
+        except Exception as e:
+            logger.warning(f"Tesseract OCR error on image bytes: {e}")
+            return ""
+
     def extract_text(self, file_path: str | Path) -> Tuple[str, Dict[str, Any]]:
         """Extract text using Tesseract OCR.
         

@@ -38,6 +38,24 @@ class BaseOCR(ABC):
         """
         ...
 
+    def extract_image_bytes(self, image_bytes: bytes, mime_type: str = "image/png") -> str:
+        """Extract text directly from image bytes.
+
+        Default implementation saves to a temporary file and calls extract_text.
+        """
+        import os
+        import tempfile
+        ext = ".png" if "png" in mime_type else ".jpg"
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            tmp.write(image_bytes)
+            tmp_path = tmp.name
+        try:
+            text, _ = self.extract_text(tmp_path)
+            return text
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
     async def aextract_text(self, file_path: str | Path) -> Tuple[str, Dict[str, Any]]:
         """Async version — default runs sync in thread pool."""
         import asyncio

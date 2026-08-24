@@ -11,9 +11,9 @@
   \usepackage{lmodern}
 \else
   \usepackage{fontspec}
-  \setmainfont{Liberation Serif}
-  \setsansfont{Liberation Sans}
-  \setmonofont{Liberation Mono}
+  \setmainfont{Latin Modern Roman}
+  \setsansfont{Latin Modern Sans}
+  \setmonofont{Latin Modern Mono}
   \usepackage[vietnamese]{babel}
 \fi
 
@@ -21,7 +21,7 @@
 \usepackage{amsmath,amssymb,amsfonts,mathtools}
 \usepackage{graphicx}
 \usepackage{tikz}
-\usetikzlibrary{positioning,shapes.geometric,arrows.meta,shadows,trees,calc,backgrounds}
+\usetikzlibrary{positioning,shapes.geometric,arrows.meta,shadows,trees}
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{tabularx}
@@ -40,8 +40,6 @@
 \definecolor{darkgreen}{RGB}{0,100,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{backcolour}{rgb}{0.96,0.96,0.96}
-\definecolor{cypherblue}{RGB}{28,112,184}
-\definecolor{codepurple}{rgb}{0.58,0,0.82}
 
 % Code Listing Configuration
 \lstdefinestyle{codeStyle}{
@@ -93,9 +91,6 @@
 \titleformat{\subsection}
   {\normalfont\bfseries\color{navyblue}\large}
   {\thesubsection}{1em}{}
-\titleformat{\subsubsection}
-  {\normalfont\bfseries\color{navyblue}\normalsize}
-  {\thesubsubsection}{1em}{}
 
 % =============================================================================
 % DOCUMENT BEGINS
@@ -109,7 +104,7 @@
     \centering
     \vspace*{0.5cm}
     {\Large\bfseries TRƯỜNG ĐẠI HỌC KHOA HỌC TỰ NHIÊN, ĐHQG-HCM}\\[0.2cm]
-    {\large\bfseries KHOA CÔNG NGHỆ THÔNG TIN}\\[0.1cm]
+    {\large\bfseries KHOA KHOA HỌC DỮ LIỆU}\\[0.1cm]
     {\large\bfseries BỘ MÔN KHOA HỌC MÁY TÍNH}\\[1.5cm]
 
     {\Large\bfseries BÁO CÁO MÔN HỌC}\\[0.3cm]
@@ -152,19 +147,19 @@
 \section*{Tóm Tắt Báo Cáo}
 \addcontentsline{toc}{chapter}{Tóm Tắt Báo Cáo}
 
-Các hệ thống \textbf{Naive RAG} (Retrieval-Augmented Generation) dựa trên phân đoạn văn bản phẳng (flat chunking) và tìm kiếm độ tương đồng vector nhúng (\textbf{Cosine Similarity}) gặp phải hai hạn chế cốt lõi trong lý thuyết và thực tiễn Biểu diễn Tri thức: (1) Thất bại trong các truy vấn mang tính vĩ mô, tổng hợp trên toàn thể tài liệu (\textbf{Global Query}) do đứt gãy cấu trúc ngữ cảnh; và (2) Bất lực trong suy luận đa bước (\textbf{Multi-Hop Reasoning}) qua các chuỗi quan hệ thực thể phức tạp.
+Các hệ thống \textbf{Naive RAG} (Retrieval-Augmented Generation) dựa trên phân đoạn văn bản phẳng (flat chunking) và tìm kiếm độ tương đồng vector nhúng (\textbf{Cosine Similarity}) gặp phải hai hạn chế cốt lõi: (1) Thất bại trong các truy vấn tổng hợp vĩ mô toàn thể tài liệu (\textbf{Global Query}) do đứt gãy ngữ cảnh cấu trúc; và (2) Hạn chế trong suy luận đa bước (\textbf{Multi-Hop Reasoning}) trên các chuỗi phụ thuộc phức tạp. Báo cáo này trình bày thiết kế và cài đặt hệ thống \textbf{HLG LLM Utils}, một khung \textbf{Graph RAG} nâng cao đa thành phần được xây dựng trên kiến trúc Monorepo Python (\texttt{uv workspaces}).
 
-Báo cáo này trình bày toàn diện công trình nghiên cứu, thiết kế kiến trúc và cài đặt hệ thống \textbf{HLG LLM Utils}, một khung làm việc \textbf{Graph RAG} nâng cao kết hợp chặt chẽ giữa Đồ thị Tri thức Thuộc tính (\textbf{Property Knowledge Graph}) trên cơ sở dữ liệu Neo4j và Mô hình Ngôn ngữ Lớn (\textbf{LLM}). Hệ thống tập trung triển khai và làm chủ bốn động cơ truy xuất -- suy luận cốt lõi:
+Hệ thống đóng góp các giải pháp đột phá trong lĩnh vực Biểu diễn Tri thức (Knowledge Representation) và Truy xuất Thông tin:
 \begin{enumerate}[leftmargin=*]
-    \item \textbf{Mô hình hóa Đồ thị Tri thức Thuộc tính (Property Knowledge Graph Formalization):} Chuẩn hóa toán học và tự động trích xuất các bộ ba thực thể, quan hệ ngữ nghĩa, thuộc tính và văn bản nguồn từ tài liệu phi cấu trúc vào Neo4j với cơ chế nạp dữ liệu Idempotent MERGE.
-    \item \textbf{Phân hoạch Cộng đồng Phân cấp Leiden (Hierarchical Leiden Community Detection):} Áp dụng thuật toán tối ưu hóa độ modun đa cấp độ trên thư viện \texttt{igraph} và \texttt{leidenalg}, tự động tạo lập cây phân cấp cộng đồng và sinh bản tóm tắt ngữ nghĩa song song bằng LLM để phục vụ thuật toán tìm kiếm toàn cục theo mô hình \textbf{Map-Reduce}.
-    \item \textbf{Máy trạng thái LangGraph Tự Sửa Lỗi Truy vấn Cypher (Self-Correcting Cypher State Machine):} Xây dựng đồ thị trạng thái có khả năng chuyển ngữ tự nhiên sang Cypher chuẩn xác, kết hợp vòng lặp phản hồi 3 bước dựa trên lược đồ đồ thị thực và log lỗi từ Neo4j.
-    \item \textbf{Khám phá Đồ thị Đa tác thể ARK (Adaptive Retriever of Knowledge):} Triển khai thuật toán khám phá quỹ đạo đa tác thể theo nghiên cứu ACL 2026, sử dụng dung hợp thứ hạng bỏ phiếu (\textbf{Voting Rank Fusion}) để thích ứng linh hoạt giữa độ rộng và độ sâu khi duyệt đồ thị.
+    \item \textbf{Property Knowledge Graph Formalization:} Tự động trích xuất các \textit{Entity}, \textit{Relationship} và thuộc tính từ văn bản phi cấu trúc, lưu trữ trên cơ sở dữ liệu đồ thị Neo4j.
+    \item \textbf{Hierarchical Leiden Community Detection:} Phân hoạch đồ thị thực thể thành cấu trúc cây cộng đồng đa cấp độ, kết hợp tóm tắt ngữ nghĩa bằng LLM theo mô hình \textbf{Map-Reduce} để phục vụ truy vấn toàn cục (\textbf{Global Search}).
+    \item \textbf{Cypher Query Self-Correction State Machine:} Cài đặt đồ thị trạng thái LangGraph cho phép LLM dịch ngôn ngữ tự nhiên thành truy vấn Cypher chuẩn xác, tự động phát hiện và sửa lỗi cú pháp/lược đồ thông qua phản hồi từ Neo4j execution log.
+    \item \textbf{ARK (Adaptive Retriever of Knowledge) Multi-Agent Exploration:} Áp dụng thuật toán khám phá quỹ đạo đa tác thể theo bài báo ACL 2026, kết hợp chiến lược dung hợp thứ hạng bỏ phiếu (\textbf{Voting Rank Fusion}) để tối ưu hóa đồng thời chiều rộng và chiều sâu truy xuất.
 \end{enumerate}
 
-Báo cáo trình bày chi tiết nền tảng lý thuyết, công thức toán học, thiết kế lược đồ cơ sở dữ liệu, kiến trúc phần mềm Monorepo (\texttt{uv workspaces}), và các thuật toán đã được cài đặt thực tế trong mã nguồn dự án.
+Báo cáo trình bày chi tiết kiến trúc, các thuật toán cốt lõi và quy trình tích hợp toàn diện của hệ thống HLG LLM Utils, mở ra hướng tiếp cận hiệu quả cho bài toán biểu diễn tri thức và truy xuất thông tin nâng cao.
 
-\textbf{Từ khóa:} Graph RAG, Knowledge Representation, Property Knowledge Graph, Hierarchical Leiden Algorithm, Cypher Self-Correction, Multi-Agent Systems, LangGraph, Adaptive Retriever of Knowledge, Monorepo uv.
+\textbf{Từ khóa:} Graph RAG, Knowledge Representation, Knowledge Graph, Hierarchical Leiden Algorithm, Cypher Self-Correction, Multi-Agent Systems, LangGraph, FastMCP, Monorepo uv.
 
 \newpage
 \tableofcontents
@@ -183,531 +178,275 @@ Báo cáo trình bày chi tiết nền tảng lý thuyết, công thức toán h
 \chapter{Giới Thiệu và Đặt Vấn Đề}
 % =============================================================================
 
-\section{Bối Cảnh Nghiên Cứu và Động Cơ}
-Trong lĩnh vực Trí tuệ Nhân tạo hiện đại, sự bùng nổ của các Mô hình Ngôn ngữ Lớn (\textbf{Large Language Models -- LLMs}) đã mở ra khả năng hiểu và tạo sinh ngôn ngữ tự nhiên chưa từng có. Tuy nhiên, các mô hình LLM thuần túy luôn tiềm ẩn hai điểm yếu mang tính bản chất: hiện tượng tạo sinh thông tin sai lệch (\textbf{Hallucination}) và sự tĩnh tại của tri thức (tri thức đóng gói trong trọng số không được cập nhật theo thời gian thực). Để khắc phục các hạn chế này, kỹ thuật \textbf{Retrieval-Augmented Generation (RAG)} đã trở thành mô hình tiêu chuẩn nhằm tiếp cận nguồn tri thức bên ngoài \cite{lewis2020rag}.
+\section{Bối Cảnh Nghiên Cứu}
+Trong kỷ nguyên của các Mô hình Ngôn ngữ Lớn (\textbf{Large Language Models -- LLMs}), khả năng xử lý và tạo sinh ngôn ngữ tự nhiên đã đạt được những bước tiến vượt bậc. Tuy nhiên, các mô hình LLM thuần túy vẫn đối mặt với vấn đề \textbf{Hallucination} (tạo sinh thông tin sai lệch) và sự suy giảm tri thức theo thời gian do tri thức được đóng gói tĩnh trong các trọng số mô hình. Để khắc phục hạn chế này, kỹ thuật \textbf{Retrieval-Augmented Generation (RAG)} đã ra đời như một giải pháp tiêu chuẩn nhằm kết nối LLM với các cơ sở tri thức bên ngoài.
 
-Mặc dù vậy, thế hệ RAG truyền thống (\textbf{Naive RAG}) -- vốn dựa trên việc chia nhỏ văn bản thành các đoạn phẳng (\textbf{Chunks}) có kích thước cố định và tìm kiếm qua độ tương đồng vector (\textbf{Vector Cosine Similarity}) -- bộc lộ nhiều điểm nghẽn nghiêm trọng khi áp dụng vào các bài toán Biểu diễn Tri thức phức tạp.
+Tuy nhiên, các mô hình \textbf{Naive RAG} thế hệ đầu tiên -- dựa trên việc chia nhỏ văn bản thành các đoạn phẳng (\textbf{Chunks}) và lưu trữ vector nhúng (\textbf{Embeddings}) -- bộc lộ những điểm yếu cố hữu khi áp dụng cho các bài toán Biểu diễn Tri thức phức tạp trong doanh nghiệp và nghiên cứu khoa học.
 
-\section{Các Điểm Nghẽn Cốt Lõi của Naive RAG}
-Qua phân tích sâu về lý thuyết biểu diễn tri thức và không gian vector, chúng tôi xác định ba rào cản mang tính cốt tử của mô hình Naive RAG phẳng:
-
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Đứt gãy Ngữ cảnh Cấu trúc (Structural Context Fragmentation):} Việc cắt nhỏ tài liệu thành các khối văn bản $c_i \in \mathcal{C}$ theo kích thước cố định (ví dụ: 500 hoặc 1000 tokens) vô tình phá hủy các mối liên kết ngữ nghĩa nằm xuyên suốt tài liệu. Khi thực thể $E_1$ được định nghĩa ở đoạn $c_1$ và có quan hệ nhân quả với thực thể $E_2$ ở đoạn $c_k$, mối quan hệ này bị xóa bỏ trong không gian vector phẳng.
-    \item \textbf{Bất lực trong Suy luận Đa bước (Multi-Hop Reasoning Failures):} Xét bài toán truy vấn đòi hỏi suy luận bắc cầu:
-    \begin{equation}
-        E_{\text{start}} \xrightarrow{R_1} E_{\text{mid}} \xrightarrow{R_2} E_{\text{target}}
-    \end{equation}
-    Khi người dùng đặt câu hỏi liên quan đến $E_{\text{start}}$ và $E_{\text{target}}$, câu truy vấn $q$ chỉ có độ tương đồng vector cao với các đoạn chứa $E_{\text{start}}$ hoặc $E_{\text{target}}$, trong khi thực thể trung gian $E_{\text{mid}}$ bị bỏ qua hoàn toàn. Kết quả là ngữ cảnh truy xuất không đủ điều kiện để LLM thực hiện suy luận logic.
-    \item \textbf{Điểm mù Truy vấn Toàn cục (Global Query Blindspots):} Đối với các câu hỏi mang tính tổng hợp vĩ mô (Macro-summarization), ví dụ: \textit{"Các nhóm chủ đề chính được thảo luận trong tập văn bản này là gì?"} hoặc \textit{"Tóm tắt cấu trúc hợp tác giữa các tổ chức"}, vector nhúng $\mathbf{q} \in \mathbb{R}^d$ của câu hỏi không có độ tương đồng cao với bất kỳ đoạn văn bản đơn lẻ nào. Naive RAG hoàn toàn thất bại trước các câu hỏi dạng này \cite{edge2024graphrag}.
+\section{Những Hạn Chế của Naive RAG}
+Qua quá trình phân tích lý thuyết và thực nghiệm, chúng tôi xác định ba rào cản chính của Naive RAG:
+\begin{enumerate}
+    \item \textbf{Structural Context Fragmentation:} Việc chia nhỏ tài liệu theo kích thước cố định (ví dụ: 1000 tokens) vô tình phá vỡ các mối quan hệ ngữ nghĩa giữa các khái niệm nằm ở các đoạn văn bản hoặc tài liệu khác nhau.
+    \item \textbf{Multi-Hop Reasoning Failures:} Khi người dùng đặt câu hỏi yêu cầu liên kết tri thức qua nhiều thực thể trung gian (ví dụ: $A \to B \to C$), việc tìm kiếm độ tương đồng vector \textbf{Cosine Similarity} chỉ thu thập được các đoạn văn bản chứa $A$ hoặc $C$ mà bỏ qua mối liên kết $B$.
+    \item \textbf{Global Query Blindspots:} Naive RAG hoàn toàn thất bại đối với các câu hỏi vĩ mô đòi hỏi sự tổng hợp toàn bộ tập tài liệu (ví dụ: \textit{"Các chủ đề chính được thảo luận trong tập văn bản này là gì?"}), do vector nhúng của câu hỏi không tương đồng với bất kỳ đoạn văn bản đơn lẻ nào.
 \end{enumerate}
 
-\section{Mục Tiêu và Đóng Góp của Đề Tài}
-Để giải quyết triệt để các hạn chế trên, đề tài tập trung nghiên cứu, thiết kế kiến trúc và cài đặt thực tế hệ thống \textbf{HLG LLM Utils} -- một khung làm việc \textbf{Graph RAG} toàn diện kết hợp Đồ thị Tri thức Thuộc tính Neo4j với các thuật toán suy luận tiên tiến.
+\section{Động Cơ và Mục Tiêu Nghiên Cứu}
+Để giải quyết triệt để các hạn chế trên, báo cáo môn học này tập trung vào việc nghiên cứu, thiết kế và cài đặt hệ thống \textbf{HLG LLM Utils} -- một khung công cụ \textbf{Graph RAG} nâng cao kết hợp giữa Đồ thị Tri thức (\textbf{Knowledge Graphs -- KGs}) và Mô hình Ngôn ngữ Lớn.
 
-Các đóng góp cụ thể của đề tài bao gồm:
-\begin{itemize}[leftmargin=*]
-    \item \textbf{Hình thức hóa Toán học và Lược đồ Đồ thị Tri thức:} Định nghĩa cấu trúc đồ thị thuộc tính $G = (\mathcal{V}, \mathcal{E}, \mathcal{P}, \mathcal{W})$, thiết kế lược đồ lưu trữ cho các nút \texttt{:Entity}, \texttt{:Chunk}, \texttt{:Document}, \texttt{:Community} và các quan hệ \texttt{:RELATED\_TO}, \texttt{:BELONGS\_TO}, \texttt{:CONTAINS\_CHUNK}, \texttt{:MENTIONS}.
-    \item \textbf{Quy trình Trích xuất Tri thức Idempotent:} Triển khai quy trình trích xuất thực thể/quan hệ có cấu trúc bằng mô hình Pydantic và LLM, lưu trữ bất đồng bộ vào Neo4j với cơ chế \texttt{MERGE} chống trùng lặp và theo dõi tài liệu nguồn.
-    \item \textbf{Thuật toán Phân hoạch Cộng đồng Phân cấp Leiden:} Cài đặt thuật toán phân cụm Leiden tối ưu hóa độ modun trên \texttt{igraph} và \texttt{leidenalg}, tự động sinh tóm tắt cộng đồng đa cấp độ phục vụ tìm kiếm toàn cục theo mô hình \textbf{Map-Reduce}.
-    \item \textbf{Máy trạng thái Tự Sửa Lỗi Cypher (LangGraph):} Xây dựng máy trạng thái tự động chuyển đổi ngôn ngữ tự nhiên sang truy vấn Cypher, có khả năng tự sửa lỗi cú pháp và lược đồ qua 3 vòng lặp phản hồi trực tiếp từ Neo4j log.
-    \item \textbf{Khám phá Đồ thị Đa tác thể ARK:} Triển khai thuật toán khám phá thích ứng ARK với cơ chế dung hợp thứ hạng bỏ phiếu (\textbf{Voting Rank Fusion}) giúp cân bằng tối ưu giữa độ rộng và độ sâu khi duyệt đồ thị.
-    \item \textbf{Kiến trúc Phần mềm Chuẩn Công Nghiệp:} Đóng gói toàn bộ hệ thống dưới dạng Monorepo đa gói (\texttt{uv workspaces}) phân tách module hoàn chỉnh, tích hợp Backend FastAPI và dịch vụ FastMCP.
+Mục tiêu cụ thể của báo cáo bao gồm:
+\begin{itemize}
+    \item Hình thức hóa mô hình Biểu diễn Tri thức \textbf{Property Knowledge Graph} trên Neo4j.
+    \item Cài đặt thuật toán \textbf{Hierarchical Leiden Community Detection} nhằm hỗ trợ truy vấn toàn cục (\textbf{Global Search}) theo mô hình \textbf{Map-Reduce}.
+    \item Xây dựng máy trạng thái tự sửa lỗi truy vấn Cypher bằng \textbf{LangGraph} nhằm đảm bảo tính chính xác khi chuyển đổi ngôn ngữ tự nhiên thành Cypher.
+    \item Tích hợp mô hình đa tác thể \textbf{ARK (Adaptive Retriever of Knowledge)} cho phép tự động điều chỉnh độ rộng và độ sâu khi duyệt đồ thị.
+    \item Thiết kế kiến trúc phần mềm chuẩn công nghiệp dưới dạng \textbf{Monorepo} (\texttt{uv workspaces}) phân tách rõ ràng các mô-đun chức năng.
 \end{itemize}
 
 % =============================================================================
-\chapter{Cơ Sở Lý Thuyết và Các Khái Niệm Nền Tảng}
+\chapter{Cơ Sở Lý Thuyết và Các Nghiên Cứu Liên Quan}
 % =============================================================================
 
-\section{Từ Mạng Ngữ Nghĩa đến Property Knowledge Graph}
-Biểu diễn Tri thức (\textbf{Knowledge Representation -- KR}) là một trụ cột nền tảng của Trí tuệ Nhân tạo, nghiên cứu phương thức hình thức hóa thế giới thực để máy tính có thể suy diễn và giải quyết vấn đề \cite{ji2022survey}.
+\section{Các Mô Hình Biểu Diễn Tri Thức}
+Biểu diễn Tri thức (\textbf{Knowledge Representation -- KR}) là một nhánh cốt lõi của Trí tuệ Nhân tạo, nghiên cứu cách thức đóng gói tri thức của thế giới thực vào máy tính để máy tính có thể suy luận và giải quyết các bài toán phức tạp \cite{ji2022survey}.
 
-\subsection{Mạng Ngữ Nghĩa (Semantic Networks) và RDF Triples}
-Mạng ngữ nghĩa truyền thống biểu diễn tri thức dưới dạng các nút (khái niệm) và cạnh có hướng (quan hệ), ví dụ: $\text{IS-A}$ hoặc $\text{PART-OF}$. Trong khung W3C Semantic Web, tri thức được chuẩn hóa thành các bộ ba RDF (\textit{Subject, Predicate, Object}):
-\begin{equation}
-    \tau = (s, p, o) \in \mathcal{E} \times \mathcal{R} \times (\mathcal{E} \cup \mathcal{L})
-\end{equation}
-trong đó $\mathcal{E}$ là tập thực thể, $\mathcal{R}$ là tập quan hệ, và $\mathcal{L}$ là tập giá trị văn bản (literals). Mặc dù có tính chuẩn hóa cao, RDF gặp khó khăn khi cần gắn kèm các thuộc tính phụ trợ (metadata, trọng số, thời gian, nguồn trích xuất) lên bản thân cạnh quan hệ.
+\subsection{Từ Mạng Ngữ Nghĩa đến Property Knowledge Graph}
+Lịch sử phát triển của KR ghi nhận sự tiến hóa từ các Mạng Ngữ nghĩa (\textbf{Semantic Networks}) của Quillian \cite{quillian1968semantic}, Bộ khung Tri thức (\textbf{Frames}) của Minsky \cite{minsky1974frame}, Logic Mô tả (\textbf{Description Logics}) \cite{baader2003description}, đến các tiêu chuẩn Semantic Web (RDF/OWL).
 
-\subsection{Đồ thị Tri thức Thuộc tính (Property Knowledge Graph)}
-Mô hình \textbf{Property Knowledge Graph (LPG)} khắc phục triệt để nhược điểm của RDF bằng cách cho phép cả đỉnh (nodes) và cạnh (relationships) đều có thể chứa nhãn định danh (\textit{Labels}) và một tập hợp các thuộc tính dạng cặp khóa-giá trị (\textit{Key-Value Properties}) \cite{robinson2015graph}:
-\begin{equation}
-    G = (\mathcal{V}, \mathcal{E}, \lambda_V, \lambda_E, \rho_V, \rho_E)
-\end{equation}
-Mô hình LPG cho phép biểu diễn trực tiếp các thuộc tính phong phú như mô tả ngữ nghĩa (\texttt{description}), nhãn phân loại (\texttt{type}), độ tin cậy, vector nhúng (\texttt{embedding}), và danh sách các tài liệu nguồn chứa thực thể (\texttt{source\_documents}).
+Trong bối cảnh công nghiệp hiện đại, \textbf{Property Knowledge Graph (PKG)} nổi lên như một chuẩn mực hiệu năng cao. Khác với bộ ba RDF đơn thuần $(Subject, Predicate, Object)$, PKG cho phép gắn trực tiếp các cặp thuộc tính $(Key, Value)$ vào cả đỉnh (\textit{Node}) và cạnh (\textit{Edge}), giúp tối ưu hóa dung lượng lưu trữ và tốc độ truy vấn \cite{robinson2015graph}.
 
 \section{Không Gian Vector và Truy Xuất Lai (Hybrid Retrieval)}
-Trong không gian biểu diễn liên tục, mỗi đoạn văn bản hoặc thực thể $x$ được ánh xạ thành một vector đặc trưng nhiều chiều $\mathbf{e}_x \in \mathbb{R}^d$ thông qua mô hình Transformer mã hóa \cite{reimers2019sentencebert}:
+Bên cạnh cấu trúc biểu diễn biểu tượng (\textbf{Symbolic Knowledge}), các không gian vector nhúng biểu nghĩa (\textbf{Sub-symbolic Embeddings}) đóng vai trò quan trọng trong việc đo lường độ tương đồng ngữ nghĩa \cite{reimers2019sentencebert}.
+
+Để đạt được hiệu năng truy xuất tối ưu, hệ thống áp dụng kỹ thuật Dung hợp Thứ hạng Tương hỗ (\textbf{Reciprocal Rank Fusion -- RRF}) \cite{cormack2009rrf} kết hợp giữa truy xuất từ khóa BM25 \cite{robertson2009bm25} và truy xuất vector nhúng:
 \begin{equation}
-    \mathbf{e}_x = \text{Embed}(x) \in \mathbb{R}^d, \quad \|\mathbf{e}_x\|_2 = 1
+RRF(d \in D) = \sum_{m \in M} \frac{1}{k + r_m(d)}
 \end{equation}
-Độ tương đồng giữa câu truy vấn $q$ và thực thể/đoạn văn bản $x$ được tính theo hàm Cosine Similarity:
+Trong đó $M$ là tập hợp các bộ truy xuất (BM25, Vector, Graph), $r_m(d)$ là thứ hạng của tài liệu $d$ trong bộ truy xuất $m$, và $k$ là hằng số chuẩn hóa (thường chọn $k = 60$).
+
+\section{Phân Hoạch Đồ Thị và Thuật Toán Leiden}
+Trong các mạng phức tạp, việc phát hiện các cấu trúc cộng đồng (\textbf{Community Detection}) giúp nhóm các thực thể có mối liên kết chặt chẽ thành các cụm ngữ nghĩa. Thuật toán Louvain từng được sử dụng phổ biến nhưng gặp phải lỗi phân mảnh cộng đồng không liên thông.
+
+Thuật toán Leiden \cite{traag2019leiden} khắc phục triệt để hạn chế này bằng cách bổ sung bước tinh lọc cục bộ (\textbf{Sub-community Refinement}). Hàm mục tiêu tối ưu hóa độ mô-đun (\textbf{Modularity Quality $\mathcal{H}$}) trong Leiden được hình thức hóa như sau:
 \begin{equation}
-    \text{Sim}(q, x) = \langle \mathbf{e}_q, \mathbf{e}_x \rangle = \sum_{i=1}^d e_{q,i} \cdot e_{x,i}
+\mathcal{H} = \frac{1}{2m} \sum_{ij} \left( A_{ij} - \gamma \frac{k_i k_j}{2m} \right) \delta(\sigma_i, \sigma_j)
 \end{equation}
+Trong đó $A_{ij}$ là ma trận kề, $k_i, k_j$ là bậc của các đỉnh, $m$ là tổng trọng số các cạnh, $\gamma$ là tham số độ phân giải (\textbf{Resolution Parameter}), và $\delta(\sigma_i, \sigma_j) = 1$ nếu đỉnh $i$ và $j$ thuộc cùng một cộng đồng.
 
-Hệ thống kết hợp phương pháp tìm kiếm từ khóa (\textbf{BM25 / Fulltext Index}) và tìm kiếm ngữ nghĩa vector (\textbf{Dense Vector Index}) theo chiến lược \textbf{Hybrid Search}, áp dụng công thức dung hợp thứ hạng tương hỗ (\textbf{Reciprocal Rank Fusion -- RRF}) \cite{cormack2009rrf}:
-\begin{equation}
-    \text{RRF\_Score}(d) = \sum_{m \in \{\text{Vector}, \text{Fulltext}\}} \frac{1}{k_{\text{rrf}} + \text{rank}_m(d)}
-\end{equation}
-với hằng số làm mịn $k_{\text{rrf}} = 60$.
-
-\section{Lý Thuyết Phân Hoạch Đồ Thị và Thuật Toán Leiden}
-Phân hoạch đồ thị là bài toán phân chia tập đỉnh $\mathcal{V}$ thành các tập con không giao nhau $\mathcal{P} = \{C_1, C_2, \dots, C_k\}$ sao cho mật độ cạnh nội bộ bên trong mỗi cụm là cực đại và mật độ cạnh liên cụm là cực tiểu \cite{traag2019leiden}.
-
-\subsection{Hàm Tối Ưu Độ Modun (Modularity)}
-Độ modun $Q$ của một phân hoạch đồ thị trên đồ thị vô hướng $G = (\mathcal{V}, \mathcal{E})$ có tổng trọng số $m = \frac{1}{2}\sum_{ij} A_{ij}$ được định nghĩa bởi Newman-Girvan:
-\begin{equation}
-    Q = \frac{1}{2m} \sum_{i,j \in \mathcal{V}} \left[ A_{ij} - \gamma \frac{k_i k_j}{2m} \right] \delta(C(i), C(j))
-\end{equation}
-trong đó $A_{ij}$ là ma trận kề, $k_i$ là bậc của đỉnh $i$, $\gamma$ là tham số độ phân giải (\textit{resolution parameter}), $C(i)$ là cộng đồng chứa đỉnh $i$, và $\delta(u, v)$ là hàm Kronecker ($\delta = 1$ nếu $u=v$, ngược lại $\delta=0$).
-
-\subsection{Cơ Chế Khắc Phục của Thuật Toán Leiden So với Louvain}
-Thuật toán Louvain truyền thống có một điểm yếu nghiêm trọng là dễ tạo ra các cộng đồng bị ngắt kết nối nội bộ (\textit{disconnected communities}) hoặc kết nối yếu. Thuật toán \textbf{Leiden} \cite{traag2019leiden} giải quyết triệt để vấn đề này bằng quy trình 3 giai đoạn:
-\begin{enumerate}
-    \item \textbf{Local Movement of Nodes:} Di chuyển cục bộ từng đỉnh đến cộng đồng lân cận nhằm tối đa hóa hàm chất lượng.
-    \item \textbf{Refinement of Partition:} Tinh chỉnh phân hoạch, trong đó các đỉnh có thể được nhóm lại thành các phân cụm con nhằm đảm bảo tính liên thông nội tại của từng cộng đồng.
-    \item \textbf{Aggregation of Graph:} Thu gọn đồ thị dựa trên các phân cụm đã tinh chỉnh và lặp lại quá trình cho đến khi đạt trạng thái tối ưu.
-\end{enumerate}
-
-\section{Khám Phá Đồ Thị Đa Tác Thể Thích Ứng (ARK)}
-Khung làm việc \textbf{ARK (Adaptive Retriever of Knowledge)} \cite{polonuer2026ark} là một mô hình tiên tiến được công bố tại ACL 2026, giải quyết bài toán duyệt đồ thị tri thức bằng cách điều phối song song nhiều tác thể (\textit{Agents}) độc lập. Thay vì thực hiện tìm kiếm cố định theo chiều sâu (DFS) hay chiều rộng (BFS), ARK cho phép các tác thể tự động quyết định hành động tại mỗi bước: tìm kiếm toàn cục, duyệt lân cận, hoặc chọn lọc nút vào tập ứng viên câu trả lời.
+\section{Khung Microsoft GraphRAG và Khám Phá ARK}
+Gần đây, Microsoft Research công bố khung \textbf{GraphRAG} \cite{edge2024graphrag}, khẳng định tính ưu việt của việc tóm tắt cộng đồng phân cấp khi trả lời các câu hỏi toàn cục. Bên cạnh đó, nghiên cứu về \textbf{ARK (Adaptive Retriever of Knowledge)} tại ACL 2026 \cite{polonuer2026ark} mở ra hướng đi mới cho phép các agent tự động điều phối hành trình duyệt đồ thị theo hai thao tác: Mở rộng chiều rộng (\texttt{global\_search}) và Duyệt sâu theo quan hệ (\texttt{neighborhood\_exploration}).
 
 % =============================================================================
 \chapter{Hình Thức Hóa Biểu Diễn Tri Thức và Thiết Kế Lược Đồ}
 % =============================================================================
 
-\section{Hình Thức Hóa Toán Học Property Knowledge Graph}
-Đồ thị tri thức trong hệ thống HLG LLM Utils được mô hình hóa toán học thành cấu trúc:
+\section{Hình Thức Hóa Property Knowledge Graph}
+Chúng tôi hình thức hóa Property Knowledge Graph $\mathcal{G}$ trong hệ thống HLG LLM Utils dưới dạng một bộ 6 thành phần:
 \begin{equation}
-    \mathcal{G} = (\mathcal{V}, \mathcal{E}, \mathcal{P}_V, \mathcal{P}_E, \ell_V, \ell_E)
+\mathcal{G} = \left( V, E, \mathcal{L}_V, \mathcal{R}_E, \Phi_V, \Phi_E \right)
 \end{equation}
-trong đó:
-\begin{itemize}[leftmargin=*]
-    \item $\mathcal{V} = \mathcal{V}_{\text{Entity}} \cup \mathcal{V}_{\text{Chunk}} \cup \mathcal{V}_{\text{Doc}} \cup \mathcal{V}_{\text{Comm}}$ là tập hợp các đỉnh phân hoạch theo các kiểu thực thể, phân đoạn văn bản, tài liệu gốc và cụm cộng đồng.
-    \item $\mathcal{E} \subseteq \mathcal{V} \times \mathcal{V}$ là tập các cạnh có hướng biểu diễn quan hệ.
-    \item $\ell_V: \mathcal{V} \to \{\text{Entity}, \text{Chunk}, \text{Document}, \text{Community}\}$ là hàm gán nhãn đỉnh.
-    \item $\ell_E: \mathcal{E} \to \{\text{RELATED\_TO}, \text{BELONGS\_TO}, \text{CONTAINS\_CHUNK}, \text{MENTIONS}, \text{PARENT\_COMMUNITY}\}$ là hàm gán nhãn quan hệ.
-    \item $\mathcal{P}_V(v)$ và $\mathcal{P}_E(e)$ là hàm ánh xạ gán thuộc tính cho đỉnh và cạnh.
-\end{itemize}
 
-\section{Thiết Kế Lược Đồ Cơ Sở Dữ Liệu Neo4j}
-Lược đồ đồ thị trên Neo4j được thiết kế tối ưu cho cả tác vụ duyệt quan hệ và tìm kiếm ngữ nghĩa vector:
-
-\begin{figure}[h!]
-\centering
-\begin{tikzpicture}[
-    node distance=2.2cm and 2.5cm,
-    every node/.style={font=\small},
-    entityNode/.style={rectangle, draw=navyblue, fill=blue!10, thick, rounded corners, minimum height=1.2cm, minimum width=2.8cm, align=center},
-    commNode/.style={rectangle, draw=darkgreen, fill=green!10, thick, rounded corners, minimum height=1.2cm, minimum width=2.8cm, align=center},
-    docNode/.style={rectangle, draw=red!70!black, fill=red!10, thick, rounded corners, minimum height=1.2cm, minimum width=2.8cm, align=center},
-    chunkNode/.style={rectangle, draw=orange!80!black, fill=orange!10, thick, rounded corners, minimum height=1.2cm, minimum width=2.8cm, align=center},
-    relEdge/.style={draw=navyblue, -Latex, thick}
-]
-    \node [docNode] (doc) {\textbf{:Document}\\\scriptsize id, filename, size, hash};
-    \node [chunkNode, right=of doc] (chunk) {\textbf{:Chunk}\\\scriptsize id, text, embedding, seq};
-    \node [entityNode, below=of chunk] (entity) {\textbf{:Entity}\\\scriptsize id, type, description,\\\scriptsize embedding, source\_docs};
-    \node [commNode, right=of entity] (comm) {\textbf{:Community}\\\scriptsize id, level, title, summary,\\\scriptsize findings, importance};
-
-    \path [relEdge] (doc) -- node[above]{\scriptsize :CONTAINS\_CHUNK} (chunk);
-    \path [relEdge] (chunk) -- node[right]{\scriptsize :MENTIONS} (entity);
-    \path [relEdge] (entity) edge [loop below] node[below]{\scriptsize :RELATED\_TO \{type, desc\}} (entity);
-    \path [relEdge] (entity) -- node[above]{\scriptsize :BELONGS\_TO \{level\}} (comm);
-    \path [relEdge] (comm) edge [loop above] node[above]{\scriptsize :PARENT\_COMMUNITY} (comm);
-\end{tikzpicture}
-\caption{Lược đồ Cấu trúc Đồ thị Tri thức Neo4j trong HLG LLM Utils}
-\label{fig:neo4j_schema}
-\end{figure}
-
-\subsection{Cấu Trúc Thuộc Tính của Các Nút}
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Nút Thực Thể (\texttt{:Entity}):}
-    \begin{itemize}
-        \item \texttt{id}: Khóa chính định danh duy nhất (chuỗi in hoa đã chuẩn hóa, ví dụ: \texttt{"GRAPH RAG"}).
-        \item \texttt{type}: Phân loại thực thể (ví dụ: \texttt{"CONCEPT"}, \texttt{"ALGORITHM"}, \texttt{"FRAMEWORK"}, \texttt{"ORGANIZATION"}).
-        \item \texttt{description}: Đoạn văn mô tả ngữ nghĩa chi tiết của thực thể.
-        \item \texttt{embedding}: Vector đặc trưng ngữ nghĩa $\mathbf{e} \in \mathbb{R}^d$ ($d=1536$ với OpenAI hoặc $d=768$ với nomic-embed).
-        \item \texttt{source\_documents}: Mảng danh sách các tên tệp tài liệu nguồn chứa thực thể này.
-    \end{itemize}
-    \item \textbf{Nút Cộng Đồng (\texttt{:Community}):}
-    \begin{itemize}
-        \item \texttt{id}: Định danh cộng đồng theo cấp độ (ví dụ: \texttt{"community\_lvl0\_14"}).
-        \item \texttt{level}: Cấp độ trong cây phân cấp ($l \in \{0, 1, \dots, L_{\text{max}}-1\}$).
-        \item \texttt{title}: Tiêu đề tóm tắt ngắn gọn của cộng đồng (dưới 10 từ).
-        \item \texttt{summary}: Đoạn văn tổng hợp các chủ đề và quan hệ chính trong cộng đồng do LLM sinh ra.
-        \item \texttt{findings}: Mảng các phát hiện, sự kiện hoặc luận điểm quan trọng.
-        \item \texttt{importance\_score}: Điểm số đánh giá mức độ trọng yếu ($s \in [0.0, 1.0]$).
-        \item \texttt{entity\_count}: Số lượng thực thể thành viên thuộc cộng đồng.
-    \end{itemize}
-\end{enumerate}
-
-\section{Hệ Thống Chỉ Mục Chuyên Biệt trên Neo4j}
-Nhằm tối ưu hóa tốc độ truy vấn đa phương thức, hệ thống tự động khởi tạo các cấu trúc chỉ mục:
-\begin{itemize}[leftmargin=*]
-    \item \textbf{Vector Index trên Entity (\texttt{entity\_embeddings}):}
-    \begin{lstlisting}[language=SQL,basicstyle=\ttfamily\scriptsize]
-CREATE VECTOR INDEX `entity_embeddings` IF NOT EXISTS
-FOR (n:Entity) ON (n.embedding)
-OPTIONS {indexConfig: {
-  `vector.dimensions`: $dimension,
-  `vector.similarity_function`: 'cosine'
-}}
-    \end{lstlisting}
-    \item \textbf{Vector Index trên Community (\texttt{community\_embeddings}):}
-    \begin{lstlisting}[language=SQL,basicstyle=\ttfamily\scriptsize]
-CREATE VECTOR INDEX `community_embeddings` IF NOT EXISTS
-FOR (c:Community) ON (c.embedding)
-OPTIONS {indexConfig: {
-  `vector.dimensions`: $dimension,
-  `vector.similarity_function`: 'cosine'
-}}
-    \end{lstlisting}
-    \item \textbf{Fulltext Index trên Entity (\texttt{entity\_fulltext}):}
-    \begin{lstlisting}[language=SQL,basicstyle=\ttfamily\scriptsize]
-CREATE FULLTEXT INDEX entity_fulltext IF NOT EXISTS
-FOR (n:Entity) ON EACH [n.id, n.description, n.type]
-    \end{lstlisting}
-\end{itemize}
-
-% =============================================================================
-\chapter{Quy Trình Đánh Chỉ Mục và Trích Xuất Tri Thức}
-% =============================================================================
-
-\section{Quy Trình Tiền Xử Lý và Phân Đoạn Văn Bản}
-Quy trình nạp tài liệu (\textbf{Document Ingestion Pipeline}) được điều phối bởi \texttt{DocumentService} với các bước chặt chẽ:
-\begin{enumerate}
-    \item Tiếp nhận tệp gốc từ MinIO S3 Storage và trích xuất văn bản thuần qua \texttt{llm-utils-parser} (hỗ trợ PDF qua PyMuPDF, Office, Code, và OCR Engine).
-    \item Thực hiện phân đoạn văn bản theo Token Window ($W = 1000$ tokens, độ gối đầu overlap $O = 200$ tokens).
-    \item Ghi nhận văn bản đoạn vào PostgreSQL và đồng thời tạo vector nhúng đoạn văn bản vào Qdrant / PGVector.
-\end{enumerate}
-
-\section{Trích Xuất Thực Thể và Quan Hệ bằng Structured LLM}
-Hệ thống sử dụng cơ chế ép kiểu cấu trúc Pydantic (\texttt{with\_structured\_output}) thông qua lớp \texttt{ExtractionResult}:
-
-\begin{lstlisting}[language=Python,basicstyle=\ttfamily\scriptsize]
-class EntityModel(BaseModel):
-    id: str
-    type: str = "CONCEPT"
-    description: str = ""
-
-class RelationshipModel(BaseModel):
-    source: str
-    target: str
-    type: str = "RELATED_TO"
-    description: str = ""
-
-class ExtractionResult(BaseModel):
-    entities: List[EntityModel] = Field(default_factory=list)
-    relationships: List[RelationshipModel] = Field(default_factory=list)
-\end{lstlisting}
-
-Prompt trích xuất được thiết kế đặc thù nhằm ép LLM trích xuất tri thức với định dạng chuẩn xác, tránh tạo sinh các thực thể chung chung vô nghĩa và đảm bảo mọi quan hệ đều có hướng rõ ràng.
-
-\section{Kỹ Thuật Nạp Dữ Liệu Cypher Idempotent MERGE}
-Để đảm bảo tính nhất quán dữ liệu khi chạy lại nhiều lần hoặc nạp tài liệu tăng cường, mã nguồn \texttt{indexing.py} cài đặt kỹ thuật \texttt{MERGE} bất biến:
-
-\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\scriptsize]
-MERGE (e:Entity {id: $id})
-ON CREATE SET e.type = $type,
-              e.description = $description,
-              e.embedding = $embedding,
-              e.source_documents = [$source_doc]
-ON MATCH SET e.description = COALESCE(e.description, $description),
-             e.embedding = $embedding,
-             e.source_documents = CASE
-                 WHEN e.source_documents IS NULL THEN [$source_doc]
-                 WHEN $source_doc IN e.source_documents THEN e.source_documents
-                 ELSE e.source_documents + [$source_doc]
-             END
-\end{lstlisting}
-
-Đối với quan hệ giữa các thực thể, câu truy vấn đảm bảo tính toàn vẹn tham chiếu và làm sạch tên quan hệ theo định dạng biểu thức chính quy \texttt{[A-Z0-9\_]}:
-
-\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\scriptsize]
-MATCH (source:Entity {id: $source})
-MATCH (target:Entity {id: $target})
-MERGE (source)-[r:RELATED_TO]->(target)
-ON CREATE SET r.description = $description, r.source_documents = [$source_doc]
-ON MATCH SET r.description = COALESCE(r.description, $description),
-             r.source_documents = CASE
-                 WHEN r.source_documents IS NULL THEN [$source_doc]
-                 WHEN $source_doc IN r.source_documents THEN r.source_documents
-                 ELSE r.source_documents + [$source_doc]
-             END
-\end{lstlisting}
-
-% =============================================================================
-\chapter{Phân Hoạch Cộng Đồng Phân Cấp và Tóm Tắt Ngữ Nghĩa}
-% =============================================================================
-
-\section{Thuật Toán Phân Hoạch Phân Cấp Đa Cấp Độ}
-Để hỗ trợ truy vấn toàn cục trên các tài liệu quy mô lớn, hệ thống triển khai thuật toán phân hoạch cộng đồng phân cấp (\textbf{Hierarchical Leiden Partitioning}) tại \texttt{community.py}.
-
-Tại mỗi cấp độ $l \in [0, L_{\text{max}}-1]$, tham số độ phân giải $\gamma_l$ được điều chỉnh giảm dần theo cấp số nhân:
-\begin{equation}
-    \gamma_l = \gamma_0 \times (0.5)^l
-\end{equation}
-Quy tắc này đảm bảo rằng tại cấp độ thấp ($l=0$), đồ thị được chia thành các cụm cộng đồng nhỏ, chi tiết; khi tăng lên cấp độ cao hơn ($l \ge 1$), các cộng đồng nhỏ được hợp nhất thành các siêu cộng đồng vĩ mô.
-
-\begin{figure}[h!]
-\centering
-\begin{tikzpicture}[
-    level 1/.style={sibling distance=5.5cm, level distance=1.6cm},
-    level 2/.style={sibling distance=2.6cm, level distance=1.6cm},
-    every node/.style={rectangle, draw=navyblue, fill=blue!10, rounded corners, font=\scriptsize, align=center, thick}
-]
-    \node [fill=yellow!20, draw=orange!80!black] {\textbf{Toàn Bộ Cơ Sở Tri Thức (Root)}}
-        child {
-            node [fill=green!15, draw=darkgreen] {\textbf{Super-Community 0 (Level 1)}\\\textit{Graph Neural Networks \& KGs}}
-            child { node {\textbf{Community 0.0 (Level 0)}\\\scriptsize Node Embeddings \& TransE} }
-            child { node {\textbf{Community 0.1 (Level 0)}\\\scriptsize GCN \& GraphSAGE} }
-        }
-        child {
-            node [fill=green!15, draw=darkgreen] {\textbf{Super-Community 1 (Level 1)}\\\textit{LLM Orchestration \& Agents}}
-            child { node {\textbf{Community 1.0 (Level 0)}\\\scriptsize Prompt Engineering \& ReAct} }
-            child { node {\textbf{Community 1.1 (Level 0)}\\\scriptsize LangGraph State Machines} }
-        };
-\end{tikzpicture}
-\caption{Cấu trúc Cây Phân cấp Cộng đồng Sinh bởi Thuật toán Leiden}
-\label{fig:community_tree}
-\end{figure}
-
-\section{Cài Đặt với Fallback giữa Neo4j GDS và Python igraph}
-Hệ thống hỗ trợ cơ chế chuyển đổi thông minh (\textbf{Fallback Mechanism}):
-\begin{enumerate}
-    \item Nếu máy chủ Neo4j cài đặt sẵn plugin \textbf{Graph Data Science (GDS)}, hệ thống gọi trực tiếp thuật toán \texttt{gds.leiden.write} trên bộ nhớ RAM của Neo4j.
-    \item Nếu không có GDS, hệ thống tự động xuất toàn bộ danh sách đỉnh và cạnh từ Neo4j sang đối tượng \texttt{igraph.Graph} trong bộ nhớ Python và thực thi thuật toán phân hoạch qua thư viện C tối ưu \texttt{leidenalg}.
-\end{enumerate}
-
-\section{Quy Trình Tóm Tắt Ngữ Nghĩa Song Song bằng LLM}
-Sau khi hoàn thành bước phân hoạch cấu trúc, lớp \texttt{CommunityDetectionService} duyệt qua từng cộng đồng $C_k$ tại cấp độ $l$, trích xuất toàn bộ danh sách thực thể thành viên và các quan hệ nội cụm, sau đó gọi LLM để sinh bản báo cáo tóm tắt có cấu trúc:
-
-\begin{lstlisting}[language=Python,basicstyle=\ttfamily\scriptsize]
-class CommunitySummaryReport(BaseModel):
-    title: str = Field(description="Short descriptive title (max 10 words)")
-    summary: str = Field(description="Comprehensive summary paragraph")
-    findings: List[str] = Field(description="3-5 key insights")
-    importance_score: float = Field(default=0.5, description="Significance [0.0, 1.0]")
-\end{lstlisting}
-
-Sau khi LLM tạo bản báo cáo, kết quả được lưu trực tiếp vào các nút \texttt{:Community} trên Neo4j cùng quan hệ \texttt{:BELONGS\_TO} liên kết từ các đỉnh thực thể thành viên.
-
-% =============================================================================
-\chapter{Các Động Cơ Truy Vấn và Suy Luận Đồ Thị Nâng Cao}
-% =============================================================================
-
-\section{Tổng Quan Các Chế Độ Truy Vấn}
-Hệ thống \texttt{llm-utils-graph-rag} cung cấp 4 chế độ truy vấn chuyên biệt tùy theo bản chất của câu hỏi:
+Trong đó:
 \begin{itemize}
-    \item \textbf{Local Search (\texttt{local}):} Tập trung vào thực thể cụ thể và vùng lân cận $k$-hop.
-    \item \textbf{Global Search (\texttt{global}):} Tóm tắt vĩ mô theo mô hình Map-Reduce trên cây cộng đồng.
-    \item \textbf{Cypher Workflow (\texttt{graph}):} Tự sinh và tự sửa lỗi truy vấn Cypher bằng LangGraph.
-    \item \textbf{ARK Exploration (\texttt{ark}):} Khám phá thích ứng đa tác thể qua không gian đồ thị.
+    \item $V = \{v_1, v_2, \dots, v_n\}$ là tập hợp các đỉnh (\textit{Nodes}).
+    \item $E \subseteq V \times \mathcal{R}_E \times V$ là tập hợp các cạnh có hướng (\textit{Edges}).
+    \item $\mathcal{L}_V = \{\text{Document}, \text{Chunk}, \text{Entity}, \text{Community}\}$ là tập các nhãn đỉnh.
+    \item $\mathcal{R}_E = \{\text{HAS\_CHUNK}, \text{MENTIONS}, \text{RELATED\_TO}, \text{BELONGS\_TO}, \text{PARENT\_OF}\}$ là tập các loại quan hệ.
+    \item $\Phi_V: V \times \mathcal{K} \to \mathcal{V}al$ là ánh xạ gán thuộc tính thuộc tập khóa $\mathcal{K}$ vào đỉnh.
+    \item $\Phi_E: E \times \mathcal{K} \to \mathcal{V}al$ là ánh xạ gán thuộc tính vào cạnh.
 \end{itemize}
 
-\section{Động Cơ Truy Vấn Cục Bộ (Local Search)}
-Quy trình truy vấn cục bộ hoạt động theo 3 bước:
-\begin{enumerate}
-    \item \textbf{Entity Seed Retrieval:} Tìm kiếm Top-$K$ thực thể hạt giống có độ tương đồng vector $\text{Sim}(\mathbf{q}, \mathbf{e}_v)$ cao nhất bằng \texttt{entity\_embeddings}.
-    \item \textbf{1-Hop / 2-Hop Neighborhood Expansion:} Mở rộng từ các thực thể hạt giống để lấy các đỉnh lân cận và cạnh quan hệ:
-    \begin{lstlisting}[language=SQL,basicstyle=\ttfamily\scriptsize]
-MATCH (e:Entity)-[r]->(neighbor:Entity)
-WHERE e.id IN $seed_ids
-RETURN e.id, type(r), r.description, neighbor.id, neighbor.description
-    \end{lstlisting}
-    \item \textbf{Context Assembly \& Reranking:} Tổng hợp ngữ cảnh cục bộ, gửi kèm các đoạn văn bản nguồn tương ứng qua mô hình LLM để tạo câu trả lời cuối cùng.
-\end{enumerate}
+\section{Lược Đồ Cơ Sở Dữ Liệu Neo4j (Graph Schema Design)}
+Hệ thống thiết kế 4 loại nhãn đỉnh chính trên Neo4j:
 
-\section{Động Cơ Truy Vấn Toàn Cục (Global Search - Map-Reduce)}
-Đối với các câu hỏi bao quát toàn bộ tài liệu, \texttt{GlobalSearchService} thực hiện quy trình Map-Reduce song song:
-\begin{enumerate}
-    \item \textbf{Filter Phase:} Tìm kiếm vector trên nhãn \texttt{:Community} tại cấp độ $l$ mong muốn để chọn ra Top-$M$ cộng đồng liên quan nhất (hoặc sử dụng đánh giá mức độ liên quan bằng LLM judge).
-    \item \textbf{Map Phase:} Gửi song song ngữ cảnh của từng cộng đồng đã chọn vào LLM để sinh câu trả lời cục bộ trung gian:
-    \begin{equation}
-        A_k^{\text{map}} = \text{LLM}_{\text{map}}(q, \text{CommunitySummary}_k, \text{Findings}_k)
-    \end{equation}
-    Nếu cộng đồng không liên quan, mô hình trả về \texttt{"NO\_RELEVANT\_INFO"}.
-    \item \textbf{Reduce Phase:} Thu thập tập hợp các câu trả lời cục bộ hợp lệ $\{A_k^{\text{map}}\}$ và đưa vào bước tổng hợp tối hậu:
-    \begin{equation}
-        A_{\text{final}} = \text{LLM}_{\text{reduce}}\left(q, \bigcup_{k=1}^M A_k^{\text{map}}\right)
-    \end{equation}
-\end{enumerate}
-
-\section{Máy Trạng Thái LangGraph Tự Sửa Lỗi Truy Vấn Cypher}
-Để thực thi các câu truy vấn có cấu trúc phức tạp mà không bị gò bó bởi các mẫu có sẵn, hệ thống triển khai một đồ thị trạng thái \textbf{LangGraph} (\texttt{workflow/graph.py}) có khả năng tự sửa lỗi Cypher.
-
-\begin{figure}[h!]
+\begin{table}[h!]
 \centering
-\begin{tikzpicture}[
-    node distance=1.6cm and 1.8cm,
-    state/.style={rectangle, draw=navyblue, fill=blue!10, thick, text width=3.2cm, align=center, minimum height=1cm, rounded corners},
-    decision/.style={diamond, draw=red!80!black, fill=red!10, thick, text width=2.2cm, align=center, inner sep=0pt},
-    line/.style={draw=navyblue, -Latex, thick}
-]
-    \node [state] (route) {\textbf{route\_query}\\(Phân tích câu hỏi)};
-    \node [state, right=of route] (gen) {\textbf{generate\_cypher}\\(Sinh câu Cypher)};
-    \node [state, right=of gen] (exec) {\textbf{execute\_cypher}\\(Thực thi trên Neo4j)};
-    \node [decision, below=of exec] (check) {Có lỗi cú pháp?};
-    \node [state, left=of check] (fix) {\textbf{correct\_cypher}\\(LLM sửa lỗi qua log)};
-    \node [state, right=of check] (synth) {\textbf{synthesize}\\(Tổng hợp câu trả lời)};
+\caption{Cấu trúc Thuộc tính của các Đỉnh trong Neo4j Schema}
+\label{tab:node_schema}
+\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm} >{\raggedright\arraybackslash}p{3.8cm} X}
+\toprule
+\textbf{Nhãn Đỉnh ($\mathcal{L}_V$)} & \textbf{Khóa Thuộc tính} & \textbf{Mô tả Kỹ thuật \& Kiểu Dữ liệu} \\
+\midrule
+\texttt{:Document} & \texttt{id, filename, status} & Định danh tài liệu gốc, tên tệp, trạng thái xử lý (\texttt{String}). \\[0.2cm]
+\texttt{:Chunk} & \texttt{id, text, index, embedding} & Đoạn văn bản nhỏ, nội dung thô, thứ tự đoạn, vector nhúng $\mathbb{R}^d$. \\[0.2cm]
+\texttt{:Entity} & \texttt{id, type, description, embedding} & Tên thực thể chuẩn hóa (ID), phân loại, mô tả tóm tắt, vector nhúng $\mathbb{R}^d$. \\[0.2cm]
+\texttt{:Community} & \texttt{id, level, title, summary, findings} & Định danh cộng đồng, cấp phân cấp ($l \in \mathbb{N}$), tiêu đề, tóm tắt LLM, chuỗi JSON kết quả. \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-    \path [line] (route) -- (gen);
-    \path [line] (gen) -- (exec);
-    \path [line] (exec) -- (check);
-    \path [line] (check) -- node[above] {\scriptsize Có (Iter $< 3$)} (fix);
-    \path [line] (fix) -- (exec);
-    \path [line] (check) -- node[above] {\scriptsize Không} (synth);
-    \path [line] (synth) -- ++(2.2,0) node[right]{\scriptsize END};
-\end{tikzpicture}
-\caption{Đồ thị Trạng thái LangGraph Tự Sửa Lỗi Truy Vấn Cypher}
-\label{fig:cypher_state_graph}
-\end{figure}
+Các mối quan hệ giữa các đỉnh được thiết lập chặt chẽ:
+\begin{align}
+(d:\text{Document}) &\xrightarrow{\text{HAS\_CHUNK}} (c:\text{Chunk}) \\
+(c:\text{Chunk}) &\xrightarrow{\text{MENTIONS}} (e:\text{Entity}) \\
+(e_1:\text{Entity}) &\xrightarrow{\text{RELATED\_TO} \{\text{description, weight}\}} (e_2:\text{Entity}) \\
+(e:\text{Entity}) &\xrightarrow{\text{BELONGS\_TO} \{\text{level}\}} (c:\text{Community}) \\
+(c_1:\text{Community}) &\xrightarrow{\text{PARENT\_OF}} (c_2:\text{Community})
+\end{align}
 
-Trạng thái workflow được lưu trữ chặt chẽ qua kiểu \texttt{GraphRAGState}:
-\begin{lstlisting}[language=Python,basicstyle=\ttfamily\scriptsize]
-class GraphRAGState(TypedDict):
-    query: str
-    routing: str           # "vector", "graph", "hybrid"
-    cypher_query: str
-    cypher_records: List[Dict[str, Any]]
-    graph_context: str
-    response: str
-    error: str
-    iteration: int
-    schema: str
-\end{lstlisting}
-
-Khi câu truy vấn Cypher phát sinh lỗi thực thi (do sai cú pháp hoặc sai tên thuộc tính), node \texttt{correct\_cypher} được kích hoạt. Node này cung cấp toàn bộ thông tin lược đồ cơ sở dữ liệu (\texttt{schema}), câu lệnh Cypher vừa sinh lỗi, và nguyên văn thông báo lỗi từ Neo4j cho LLM để thực hiện điều chỉnh chính xác. Giới hạn số vòng lặp tối đa là 3 lần giúp ngăn chặn tình trạng lặp vô hạn.
-
-\section{Động Cơ Khám Phá Thích Ứng Đa Tác Thể ARK}
-Khung làm việc \textbf{ARK} (\texttt{ark\_service.py}, \texttt{ark\_agent.py}, \texttt{ark\_retriever.py}) mô hình hóa quá trình truy xuất thông tin như một trò chơi tìm kiếm phân tán giữa $N$ tác thể độc lập ($N=3$, nhiệt độ khám phá $T=0.7$, số bước tối đa $t_{\text{max}}=30$).
-
-\subsection{Tập Công Cụ của Tác Thể ARK}
-Mỗi tác thể ARK được trang bị 4 công cụ hành động:
-\begin{enumerate}
-    \item \texttt{global\_search}: Tìm kiếm thực thể ban đầu qua chỉ mục \texttt{entity\_fulltext} hoặc vector index.
-    \item \texttt{neighborhood\_exploration}: Khám phá các thực thể và quan hệ lân cận trong bán kính 1-hop từ một nút cho trước.
-    \item \texttt{add\_to\_answer}: Đánh dấu chọn một nút thực thể kèm theo giải thích suy luận (\textit{reasoning}) để đưa vào tập ứng viên câu trả lời.
-    \item \texttt{finish}: Kết thúc hành trình khám phá khi tác thể nhận thấy đã thu thập đủ thông tin.
-\end{enumerate}
-
-\subsection{Dung Hợp Thứ Hạng Bỏ Phiếu (Voting Rank Fusion)}
-Sau khi $N$ tác thể hoàn thành các hành trình khám phá song song, tập hợp các nút được lựa chọn $\mathcal{S}_1, \mathcal{S}_2, \dots, \mathcal{S}_N$ được tổng hợp bằng cơ chế \textbf{Voting Rank Fusion}:
+\section{Quy Trình Trích Xuất Bộ Ba (Triplet Extraction Taxonomy)}
+Để đảm bảo tính đồng nhất khi rút trích tri thức từ văn bản phi cấu trúc, hệ thống định nghĩa bộ khung trích xuất thông qua LLM với đầu ra định dạng Pydantic:
 \begin{equation}
-    \text{Score}(u) = \sum_{a=1}^N \mathbb{I}(u \in \mathcal{S}_a) \cdot \left[ 1.0 + \frac{1.0}{1.0 + \text{order}_a(u)} \right]
+T_{extract}(C_k) \to \left( \{e_i = (\text{name}_i, \text{type}_i, \text{desc}_i)\}, \{r_{ij} = (e_i, \text{rel\_type}, e_j, \text{desc}_{ij}, w_{ij})\}\right)
 \end{equation}
-trong đó $\mathbb{I}(\cdot)$ là hàm chỉ thị sự hiện diện của nút $u$ trong tập chọn của tác thể $a$, và $\text{order}_a(u)$ là thứ tự bước mà tác thể $a$ đã chọn nút $u$. Top-$K$ nút có điểm số cao nhất được trích xuất siêu dữ liệu đầy đủ từ Neo4j để đóng gói thành ngữ cảnh cuối cùng cho mô hình sinh.
+
+Tất cả các tên thực thể $e_i$ đều được viết hoa và chuẩn hóa ký tự đầu cuối nhằm tránh trùng lặp dạng $e_{\text{upper}} = \text{UPPER}(\text{TRIM}(\text{name}_i))$.
 
 % =============================================================================
 \chapter{Kiến Trúc Hệ Thống và Thiết Kế Monorepo Modular}
 % =============================================================================
 
-\section{Kiến Trúc Tổng Thể Monorepo UV Workspace}
-Hệ thống HLG LLM Utils được tổ chức dưới dạng \textbf{Monorepo Python} được quản trị bởi công cụ hiện đại \textbf{uv workspaces} (\texttt{RAG\_package/pyproject.toml}), đảm bảo phân tách rõ ràng ranh giới giữa các mô-đun:
+\section{Tổng Quan Kiến Trúc UV Workspace}
+Hệ thống \textbf{HLG LLM Utils} được tổ chức theo mô hình Monorepo hiện đại sử dụng công cụ quản lý gói \texttt{uv} của Astral. Kiến trúc được chia thành 9 gói độc lập trong thư mục \texttt{RAG\_package/packages/}:
 
 \begin{figure}[h!]
 \centering
-\begin{tikzpicture}[
-    every node/.style={font=\scriptsize, align=center, thick},
-    pkgCore/.style={rectangle, draw=navyblue, fill=blue!15, rounded corners, minimum height=0.9cm, minimum width=3.4cm},
-    pkgBase/.style={rectangle, draw=navyblue, fill=blue!5, rounded corners, minimum height=0.8cm, minimum width=2.4cm},
-    pkgApp/.style={rectangle, draw=darkgreen, fill=green!10, rounded corners, minimum height=0.9cm, minimum width=3.4cm},
-    pkgExt/.style={rectangle, draw=purple!80!black, fill=purple!10, rounded corners, minimum height=0.8cm, minimum width=3.2cm},
-    depLine/.style={draw=navyblue, -Latex, thick}
-]
-    \node [pkgCore] (core) at (4, 4.5) {\textbf{llm-utils-core}\\\tiny (Plugin Base \& Loader)};
+\begin{tikzpicture}[node distance=1.5cm and 2cm, auto,
+    block/.style={rectangle, draw=navyblue, fill=blue!5, thick, text width=3cm, align=center, minimum height=1.2cm, rounded corners},
+    line/.style={draw=navyblue, -Latex, thick}]
 
-    \node [pkgBase] (llm) at (0, 3) {\textbf{llm-utils-llm}\\\tiny LLM/Embed Factory};
-    \node [pkgBase] (vec) at (2.7, 3) {\textbf{llm-utils-vector}\\\tiny Qdrant / PGVector};
-    \node [pkgBase] (parse) at (5.3, 3) {\textbf{llm-utils-parser}\\\tiny PyMuPDF / OCR};
-    \node [pkgBase] (rerank) at (8, 3) {\textbf{llm-utils-reranker}\\\tiny FlashRank / CrossEnc};
+    \node [block] (core) {\textbf{llm-utils-core}\\(Plugin Base \& Loader)};
+    \node [block, below left=of core] (llm) {\textbf{llm-utils-llm}\\(LLM/Embed Factory)};
+    \node [block, below=of core] (vec) {\textbf{llm-utils-vector}\\(Qdrant/PGVector)};
+    \node [block, below right=of core] (sub) {\textbf{llm-utils-subagent}\\(Stateless Subagent)};
+    \node [block, below=of llm] (rag) {\textbf{llm-utils-rag}\\(Indexing/Querying)};
+    \node [block, below=of sub] (mcp) {\textbf{llm-utils-mcp}\\(MCP Server/Client)};
+    \node [block, below=of vec] (graph) {\textbf{llm-utils-graph-rag}\\(Neo4j, Leiden, ARK)};
 
-    \node [pkgApp] (rag) at (2.5, 1.5) {\textbf{llm-utils-rag}\\\tiny Traditional RAG Services};
-    \node [pkgApp] (sub) at (6, 1.5) {\textbf{llm-utils-subagent}\\\tiny Stateless ReAct/Graph};
-
-    \node [pkgCore, fill=orange!15, draw=orange!80!black] (graphrag) at (2.5, 0) {\textbf{llm-utils-graph-rag}\\\tiny Neo4j, Leiden, Cypher, ARK};
-    \node [pkgExt] (mcp) at (6, 0) {\textbf{llm-utils-mcp}\\\tiny FastMCP \& OpenAPI Server};
-
-    \path [depLine] (core) -- (llm);
-    \path [depLine] (core) -- (vec);
-    \path [depLine] (core) -- (parse);
-    \path [depLine] (core) -- (rerank);
-
-    \path [depLine] (llm) -- (rag);
-    \path [depLine] (vec) -- (rag);
-    \path [depLine] (parse) -- (rag);
-    \path [depLine] (rerank) -- (rag);
-
-    \path [depLine] (rag) -- (graphrag);
-    \path [depLine] (core) -- (sub);
-    \path [depLine] (sub) -- (mcp);
+    \path [line] (core) -- (llm);
+    \path [line] (core) -- (vec);
+    \path [line] (core) -- (sub);
+    \path [line] (llm) -- (rag);
+    \path [line] (vec) -- (rag);
+    \path [line] (rag) -- (graph);
+    \path [line] (sub) -- (mcp);
+    \path [line] (graph) -- (mcp);
 \end{tikzpicture}
 \caption{Sơ đồ Phụ thuộc Mô-đun trong uv Workspace Monorepo}
-\label{fig:monorepo_architecture}
+\label{fig:monorepo_arch}
 \end{figure}
 
-\section{Phân Tích Chi Tiết Các Gói Thành Phần}
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{\texttt{llm-utils-core}:} Định nghĩa giao diện plugin cơ sở \texttt{TaskPlugin} và cơ chế nạp động qua Python Entry Points (\texttt{llm\_utils.plugins}).
-    \item \textbf{\texttt{llm-utils-llm}:} Cung cấp lớp đóng gói trừu tượng \texttt{LLMFactory} và \texttt{EmbeddingsFactory}, hỗ trợ linh hoạt cả OpenAI API và Anthropic Claude API.
-    \item \textbf{\texttt{llm-utils-vector}:} Quản lý kết nối và thực thi tìm kiếm vector trên cơ sở dữ liệu Qdrant và PostgreSQL mở rộng \texttt{pgvector}.
-    \item \textbf{\texttt{llm-utils-parser}:} Xử lý chuyển đổi tài liệu đa định dạng (PDF, Docx, TXT) tích hợp trích xuất layout qua PyMuPDF và OCR.
-    \item \textbf{\texttt{llm-utils-reranker}:} Cung cấp các mô hình tái xếp hạng giai đoạn 2 (Second-Stage Reranking) dựa trên FlashRank và CrossEncoder nhằm nâng cao độ chính xác ngữ cảnh.
-    \item \textbf{\texttt{llm-utils-graph-rag}:} Gói mở rộng trung tâm cài đặt toàn bộ kết nối Neo4j, trích xuất thực thể, thuật toán Leiden, Map-Reduce, Cypher Self-Correction và ARK.
-    \item \textbf{\texttt{llm-utils-mcp}:} Cung cấp giao thức Model Context Protocol (\textbf{FastMCP}), tự động chuyển đổi các công cụ Graph RAG thành chuẩn OpenAPI RESTful tại cổng \texttt{8001}.
+\section{Phân Tích Chi Tiết Các Gói Core}
+\begin{itemize}
+    \item \textbf{\texttt{llm-utils-core}:} Định nghĩa giao diện \texttt{TaskPlugin} và cơ chế nạp plugin động qua Python entry-points (\texttt{llm\_utils.plugins}).
+    \item \textbf{\texttt{llm-utils-graph-rag}:} Mô-đun trung tâm quản lý giao tiếp Neo4j (\texttt{Neo4jGraphStore}), dịch vụ trích xuất đồ thị, phân hoạch Leiden, truy vấn toàn cục Map-Reduce và thuật toán ARK.
+    \item \textbf{\texttt{llm-utils-subagent}:} Khung tạo subagent phi trạng thái (\textbf{Stateless}), đảm bảo xây dựng lại đồ thị thực thi và bộ nhớ sạch sau mỗi lần gọi \texttt{run()} / \texttt{arun()}.
+    \item \textbf{\texttt{llm-utils-mcp}:} Triển khai Model Context Protocol của Anthropic, cho phép xuất các công cụ Graph RAG thành MCP Server phục vụ cho ứng dụng bên ngoài.
+\end{itemize}
+
+\section{Tích Hợp Backend (FastAPI) và Frontend (React)}
+Tầng Backend (\texttt{BE/app/}) đóng vai trò điều phối trung tâm:
+\begin{itemize}
+    \item \textbf{Service Registry (\texttt{services/registry.py}):} Sử dụng khóa luồng \texttt{threading.Lock} để khởi tạo các Lazy Singleton cho \texttt{GraphQueryService}, \texttt{CommunityDetectionService}, và \texttt{GlobalSearchService}.
+    \item \textbf{WebSocket Streaming Router (\texttt{routers/chat\_router.py}):} Sử dụng sự kiện \texttt{astream\_events} của LangGraph để truyền phát (\textbf{Stream}) các phản hồi mã suy luận, suy nghĩ của LLM (\texttt{thinking\_delta}) và kết quả gọi công cụ về Frontend theo thời gian thực.
+\end{itemize}
+
+% =============================================================================
+\chapter{Các Thuật Toán Tìm Kiếm và Suy Luận Nâng Cao}
+% =============================================================================
+
+\section{Thuật Toán Phân Hoạch Leiden và Tóm Tắt Phân Cấp}
+Thuật toán phân hoạch cộng đồng phân cấp Leiden được cài đặt với chiến lược đa cấp độ (\textbf{Multi-level Hierarchy}). Tại mỗi cấp độ $l \in [0, L_{\max}-1]$, hệ thống thực hiện phân hoạch và tóm tắt song song:
+
+\begin{center}
+\fbox{
+\begin{minipage}{0.92\textwidth}
+\vspace{0.2cm}
+{\bfseries\color{navyblue}Thuật toán 1: Phân hoạch Cộng đồng Leiden Phân cấp và Tóm tắt LLM}\\[0.2cm]
+\small
+\textbf{Đầu vào:} Đồ thị thực thể $G = (V, E, W)$, Tham số độ phân giải $\gamma_0$, Số cấp tối đa $L_{\max}$\\
+\textbf{Đầu ra:} Cây cộng đồng $C_{tree}$ đã được tóm tắt ngữ nghĩa bởi LLM\\[0.2cm]
+1: $G_{current} \leftarrow G$\\
+2: \textbf{for} $l = 0$ \textbf{to} $L_{\max} - 1$ \textbf{do}\\
+3: \quad $\gamma_l \leftarrow \gamma_0 \times (0.5)^l$\\
+4: \quad $P_l \leftarrow \text{FindPartitionLeiden}(G_{current}, \gamma_l)$\\
+5: \quad $P_{refined} \leftarrow \text{RefineSubCommunities}(G_{current}, P_l)$\\
+6: \quad \textbf{foreach} Cộng đồng $c \in P_{refined}$ \textbf{do}\\
+7: \qquad $SubGraph \leftarrow \text{ExtractEntitiesAndEdges}(G, c)$\\
+8: \qquad $Report \leftarrow \text{LLM\_Summarize}(SubGraph)$\\
+9: \qquad $\text{SaveToNeo4j}(c, l, Report.title, Report.summary, Report.findings)$\\
+10: \quad $G_{current} \leftarrow \text{AggregateGraph}(G_{current}, P_{refined})$
+\vspace{0.2cm}
+\end{minipage}
+}
+\end{center}
+
+\section{Tìm Kiếm Toàn Cục Theo Mô Hình Map-Reduce}
+Khi hệ thống nhận truy vấn toàn cục (\textbf{Global Query}), quy trình Map-Reduce được kích hoạt:
+\begin{enumerate}
+    \item \textbf{Filter Phase:} Tìm kiếm vector nhúng trên tập các đỉnh \texttt{:Community} ở cấp độ $l$ mong muốn để chọn ra Top-K cộng đồng liên quan nhất.
+    \item \textbf{Map Phase:} Đưa song song nội dung tóm tắt của từng cộng đồng được chọn vào LLM để tạo các câu trả lời trung gian:
+    \begin{equation}
+    A_{map}^{(k)} = \text{LLM}_{map}(q, \text{CommunitySummary}_k)
+    \end{equation}
+    \item \textbf{Reduce Phase:} Tổng hợp tất cả câu trả lời trung gian $A_{map}^{(k)}$ có điểm số cao để tổng hợp thành câu trả lời cuối cùng $A_{final}$:
+    \begin{equation}
+    A_{final} = \text{LLM}_{reduce}\left( q, \bigcup_k A_{map}^{(k)} \right)
+    \end{equation}
 \end{enumerate}
 
-\section{Tích Hợp Backend FastAPI và Service Registry Lazy Singleton}
-Backend FastAPI (\texttt{BE/}) được thiết kế theo kiến trúc phi trạng thái (\textit{Stateless}) và hướng dịch vụ (\textit{Service-Oriented}).
+\section{Máy Trạng Thái Tự Sửa Lỗi Truy Vấn Cypher (LangGraph)}
+Thay vì dựa vào việc sinh truy vấn tĩnh, chúng tôi xây dựng một đồ thị trạng thái \textbf{LangGraph} (\texttt{workflow/graph.py}) thực hiện việc kiểm tra và tự sửa lỗi câu truy vấn Cypher:
 
-Để đảm bảo hiệu năng và tính thread-safe khi truy cập cơ sở dữ liệu đồ thị Neo4j, hệ thống cài đặt mô thức \textbf{Thread-Safe Lazy Singleton Registry} (\texttt{GraphRAGServiceRegistry} tại \texttt{BE/app/services/registry.py}):
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[node distance=1.8cm, auto,
+    state/.style={rectangle, draw=navyblue, fill=blue!10, thick, text width=3.2cm, align=center, minimum height=1cm, rounded corners},
+    decision/.style={diamond, draw=red!80!black, fill=red!10, thick, text width=2.2cm, align=center, inner sep=0pt},
+    line/.style={draw=navyblue, -Latex, thick}]
 
-\begin{lstlisting}[language=Python,basicstyle=\ttfamily\scriptsize]
-class GraphRAGServiceRegistry:
-    _instance: Optional["GraphRAGServiceRegistry"] = None
-    _lock = threading.Lock()
+    \node [state] (gen) {\textbf{generate\_cypher}\\(Dịch NL sang Cypher)};
+    \node [state, right=of gen] (exec) {\textbf{execute\_cypher}\\(Thực thi trên Neo4j)};
+    \node [decision, below=of exec] (check) {Có lỗi cú pháp?};
+    \node [state, left=of check] (fix) {\textbf{correct\_cypher}\\(LLM sửa lỗi qua Log)};
+    \node [state, right=of check] (synth) {\textbf{synthesize}\\(Tổng hợp kết quả)};
 
-    def __new__(cls, config: Optional[AppConfig] = None):
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = super().__new__(cls)
-                cls._instance._initialized = False
-            return cls._instance
+    \path [line] (gen) -- (exec);
+    \path [line] (exec) -- (check);
+    \path [line] (check) -- node[above] {Có (Iter $< 3$)} (fix);
+    \path [line] (fix) -- (exec);
+    \path [line] (check) -- node[above] {Không} (synth);
+\end{tikzpicture}
+\caption{Đồ thị Trạng thái LangGraph Tự Sửa Lỗi Truy Vấn Cypher}
+\label{fig:cypher_state_graph}
+\end{figure}
 
-    def initialize(self, config: AppConfig) -> None:
-        if self._initialized:
-            return
-        with self._lock:
-            # Lazy initialize Neo4jGraphStore, IndexingService,
-            # CommunityDetectionService, GlobalSearchService, ArkQueryService
-            self._initialized = True
-\end{lstlisting}
+\section{Khám Phá Đồ Thị Đa Tác Thể ARK}
+Mô-đun \texttt{ark\_agent.py} triển khai $N$ tác thể ngẫu nhiên ($N = 3$, nhiệt độ $T = 0.7$) thực hiện song song các bước duyệt đồ thị. Sau khi các tác thể kết thúc, hệ thống áp dụng kỹ thuật \textbf{Voting Rank Fusion (VRF)} để chọn ra tập thực thể tối ưu cho câu trả lời.
 
-Mô thức này đảm bảo tất cả các API route và Agent Worker đều chia sẻ chung một phiên kết nối Neo4j và cấu hình nhúng đồng nhất, hạn chế tối đa chi phí khởi tạo lại đối tượng trên từng yêu cầu.
+% =============================================================================
+\chapter{Cài Đặt Hệ Thống và Tích Hợp Kỹ Thuật}
+% =============================================================================
+
+\section{Tích Hợp Cơ Sở Dữ Liệu và Lưu Trữ Object}
+Hệ thống sử dụng ba cơ sở dữ liệu chuyên biệt hoạt động song song trong môi trường Docker:
+\begin{itemize}
+    \item \textbf{Neo4j (Graph Database):} Lưu trữ thực thể, mối quan hệ và cấu trúc cộng đồng. Khởi tạo chỉ mục vector trên nhãn \texttt{:Entity} và \texttt{:Community} với kích thước $d=1536$ hoặc $d=768$.
+    \item \textbf{Qdrant / PGVector (Vector Database):} Lưu trữ vector nhúng của các đoạn văn bản (Chunks) phục vụ tìm kiếm ngữ nghĩa thô.
+    \item \textbf{MinIO (S3 Object Storage):} Lưu trữ tệp gốc (PDF, Docx, Hình ảnh) với cơ chế đồng bộ trạng thái tài liệu vào PostgreSQL qua SQLAlchemy Async API.
+\end{itemize}
+
+\section{Tự Động Hóa Công Cụ Qua Model Context Protocol (MCP)}
+Mô-đun \texttt{llm-utils-mcp} cho phép đóng gói toàn bộ các dịch vụ tìm kiếm Graph RAG thành một máy chủ MCP tiêu chuẩn dựa trên \texttt{FastMCP}. Thông qua công cụ chuyển đổi MCPO, các công cụ này tự động mở rộng thành giao diện chuẩn RESTful OpenAPI tại cổng \texttt{8001}, cho phép các hệ thống bên ngoài gọi trực tiếp dịch vụ Graph RAG.
 
 % =============================================================================
 \chapter{Thảo Luận, Thách Thức và Hướng Phát Triển}
 % =============================================================================
 
-\section{Thảo Luận Kiến Trúc và Ưu Thế Thực Tiễn}
-Việc kết hợp giữa cấu trúc biểu tượng (\textbf{Symbolic Representation}) trên Đồ thị Tri thức Neo4j và biểu diễn phi biểu tượng (\textbf{Sub-symbolic Embeddings}) trong không gian vector mang lại cho hệ thống HLG LLM Utils những ưu thế vượt trội:
-\begin{itemize}[leftmargin=*]
-    \item \textbf{Độ tin cậy và Khả năng giải thích (Explainability):} Mọi quan hệ giữa các thực thể đều được lưu trữ minh bạch dưới dạng cạnh đồ thị có nhãn định danh và dẫn chiếu chính xác đến tài liệu gốc (\texttt{source\_documents}), giúp loại bỏ hoàn toàn hiện tượng tạo sinh ảo tưởng.
-    \item \textbf{Khả năng mở rộng đa chiều:} Sự phân chia thành 4 chế độ truy vấn (Local, Global, Graph Cypher, ARK) cho phép hệ thống linh hoạt thích ứng với mọi cấp độ câu hỏi từ chi tiết cụ thể đến tổng hợp vĩ mô.
-\end{itemize}
+\section{Thảo Luận}
+Việc kết hợp giữa cấu trúc biểu tượng (Đồ thị Neo4j) và biểu diễn phi biểu tượng (Vector Embeddings) cho phép hệ thống HLG LLM Utils vừa đảm bảo tính chính xác tuyệt đối của các mối quan hệ thực thể, vừa duy trì khả năng tìm kiếm linh hoạt theo ngữ nghĩa.
 
 \section{Những Thách Thức Kỹ Thuật}
-Trong quá trình phát triển hệ thống, chúng tôi nhận diện hai thách thức kỹ thuật lớn:
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Chi phí Tính toán Giai đoạn Đánh Chỉ Mục (Indexing Computation Overhead):} Quy trình trích xuất thực thể/quan hệ bằng LLM và sinh tóm tắt cộng đồng Leiden phân cấp đòi hỏi số lượng lớn các lượt gọi LLM. Đối với tập tài liệu hàng nghìn trang, chi phí token và thời gian xử lý ban đầu là đáng kể.
-    \item \textbf{Cập nhật Đồ thị Động (Dynamic Incremental Graph Updates):} Khi người dùng tải lên tài liệu mới hoặc xóa tài liệu cũ, việc phân hoạch lại toàn bộ đồ thị cộng đồng có độ phức tạp tính toán cao. Cần phát triển thuật toán phân cụm Leiden cục bộ cập nhật tăng cường (\textit{Incremental Leiden Updates}) để tối ưu hóa tài nguyên.
-\end{enumerate}
+\begin{itemize}
+    \item \textbf{Chi phí Tính toán Indexing:} Quy trình trích xuất thực thể/quan hệ và tóm tắt cộng đồng Leiden đòi hỏi số lượng lớn các lượt gọi LLM trong giai đoạn đánh chỉ mục ban đầu (Indexing Phase).
+    \item \textbf{Dynamic Graph Updates:} Khi thêm tài liệu mới, việc phân hoạch lại toàn bộ đồ thị cộng đồng có chi phí cao. Cần phát triển các thuật toán Leiden cập nhật từng phần (Incremental Leiden Clustering).
+\end{itemize}
 
 \section{Hướng Phát Triển Trong Tương Lai}
-Từ nền tảng đã xây dựng thành công, các hướng nghiên cứu mở rộng trong tương lai bao gồm:
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Đồ thị Tri thức Đa phương thức (Multimodal Knowledge Graphs):} Mở rộng khả năng trích xuất tri thức từ bảng biểu phức tạp, sơ đồ kiến trúc và công thức toán học trong tài liệu kỹ thuật, liên kết chúng trực tiếp vào các nút thực thể đồ thị.
-    \item \textbf{Học Tăng Cường cho Duyệt Đồ thị (RL-based Graph Exploration):} Tích hợp các thuật toán Học Tăng Cường (Reinforcement Learning) vào tác thể ARK để tối ưu hóa chính sách chọn đường đi trên đồ thị tri thức quy mô hàng triệu đỉnh.
+\begin{enumerate}
+    \item Mở rộng Multimodal Knowledge Graph, hỗ trợ trích xuất biểu đồ, bảng biểu và công thức toán học từ tệp PDF.
+    \item Cải tiến cơ chế ARK với các tác thể Reinforcement Learning để tối ưu hóa quỹ đạo khám phá đồ thị.
 \end{enumerate}
 
 % =============================================================================
@@ -715,9 +454,7 @@ Từ nền tảng đã xây dựng thành công, các hướng nghiên cứu m�
 % =============================================================================
 
 \section{Kết Luận}
-Đề tài đã hoàn thành xuất sắc mục tiêu nghiên cứu và cài đặt thực tế khung công cụ \textbf{HLG LLM Utils}, một giải pháp toàn diện cho bài toán Biểu diễn Tri thức và Truy xuất Thông tin Nâng cao.
-
-Bằng việc kết hợp hài hòa giữa Property Knowledge Graph Neo4j, Thuật toán Phân hoạch Phân cấp Leiden, Đồ thị Trạng thái LangGraph Tự Sửa Lỗi Cypher và Khung Khám phá Đa tác thể ARK, hệ thống đã giải quyết triệt để các hạn chế cố hữu của Naive RAG, thiết lập nền tảng kiến trúc vững chắc, có tính ứng dụng cao và sẵn sàng triển khai trong môi trường thực tế.
+Nghiên cứu này đã xây dựng thành công khung công cụ \textbf{HLG LLM Utils}, một giải pháp toàn diện cho bài toán Biểu diễn Tri thức và Truy xuất Thông tin Nâng cao. Sự kết hợp giữa Property Knowledge Graph Neo4j, Thuật toán Phân hoạch Leiden Phân cấp, Đồ thị Trạng thái LangGraph Tự Sửa lỗi Cypher và Khám phá Đa tác thể ARK đã giải quyết triệt để các hạn chế của Naive RAG, mang lại nền tảng kiến trúc vững chắc và linh hoạt.
 
 \section{Bảng Phân Công Nhiệm Vụ Nhóm}
 
@@ -728,22 +465,22 @@ Bằng việc kết hợp hài hòa giữa Property Knowledge Graph Neo4j, Thu�
 \small
 \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.8cm} >{\centering\arraybackslash}p{2.2cm} X >{\centering\arraybackslash}p{1.8cm}}
 \toprule
-\textbf{Họ và Tên} & \textbf{MSHV} & \textbf{Nhiệm Vụ Chi Tiết Cụ Thể Đã Thực Hiện} & \textbf{Đóng Góp} \\
+\textbf{Họ và Tên} & \textbf{MSHV} & \textbf{Nhiệm Vụ Chi Tiết Cụ Thể} & \textbf{Đóng Góp} \\
 \midrule
 \textbf{Nguyễn Hoài Nam} & 25C01014 &
 \begin{itemize}[leftmargin=*,noitemsep,topsep=0pt,partopsep=0pt,parsep=0pt]
 \item Thiết kế kiến trúc Monorepo \texttt{uv workspace} (\texttt{llm-utils-core}, \texttt{llm-utils-graph-rag}).
 \item Cài đặt Neo4j Graph Store và Thuật toán Phân hoạch Cộng đồng Leiden (\texttt{community.py}).
-\item Xây dựng quy trình Tìm kiếm Toàn cục Map-Reduce (\texttt{global\_search.py}).
-\item Soạn thảo báo cáo lý thuyết và kiến trúc chi tiết bằng LaTeX.
+\item Cài đặt quy trình Tìm kiếm Toàn cục Map-Reduce (\texttt{global\_search.py}).
+\item Soạn thảo báo cáo chi tiết LaTeX.
 \end{itemize} & 50\% \\[0.2cm]
 \midrule
 \textbf{Phạm Cung Lê Nhân Vũ} & 25C01049 &
 \begin{itemize}[leftmargin=*,noitemsep,topsep=0pt,partopsep=0pt,parsep=0pt]
-\item Xây dựng máy trạng thái LangGraph Tự Sửa Lỗi Cypher (\texttt{workflow/graph.py}).
-\item Cài đặt mô hình Đa tác thể Khám phá Thích ứng ARK (\texttt{ark\_agent.py}, \texttt{ark\_retriever.py}).
-\item Thiết kế hệ thống Backend FastAPI, Service Registry và tích hợp cơ sở dữ liệu vector.
-\item Tối ưu hóa hiệu năng truy xuất và hoàn thiện tích hợp toàn hệ thống.
+\item Cài đặt máy trạng thái LangGraph Tự Sửa Lỗi Cypher (\texttt{workflow/graph.py}).
+\item Cài đặt mô hình Đa tác thể Khám phá ARK (\texttt{ark\_agent.py}, \texttt{ark\_retriever.py}).
+\item Xây dựng hệ thống Backend FastAPI và tích hợp cơ sở dữ liệu Qdrant / PGVector.
+\item Tối ưu hóa hiệu năng truy xuất và hoàn thiện tích hợp hệ thống.
 \end{itemize} & 50\% \\
 \bottomrule
 \end{tabularx}

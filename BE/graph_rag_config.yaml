@@ -98,7 +98,7 @@ chunking:
 # -----------------------------------------------------------------------------
 extraction:
   pdf:
-    extractor: "full"          # "pymupdf" | "full" | "ocr"
+    extractor: "ocr"          # "pymupdf" | "full" | "ocr"
     enable_ocr: true
     min_chars: 50
     

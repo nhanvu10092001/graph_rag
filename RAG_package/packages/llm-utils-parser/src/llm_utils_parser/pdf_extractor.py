@@ -39,7 +39,7 @@ class PDFExtractor(BaseExtractor):
         self.primary_loader = pdf_cfg.get("primary_loader", "pypdf")
         self.enable_ocr = pdf_cfg.get("enable_ocr", False)
         self.extract_tables = pdf_cfg.get("extract_tables", False)
-        self.min_text_threshold = pdf_cfg.get("min_text_threshold", MIN_TEXT_THRESHOLD)
+        self.min_text_threshold = pdf_cfg.get("min_text_threshold") or pdf_cfg.get("min_chars", MIN_TEXT_THRESHOLD)
 
 
     def extract(self, file_path: Path, **kwargs) -> Tuple[str, Dict[str, Any]]:

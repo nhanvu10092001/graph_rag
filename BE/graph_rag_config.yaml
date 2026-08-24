@@ -1,6 +1,6 @@
 # Neo4j Graph Database Configuration
 neo4j:
-  uri: "bolt://localhost:7687"
+  uri: "bolt://neo4j:7687"
   username: "neo4j"
   password: "password"
   database: "neo4j"
@@ -25,7 +25,7 @@ embeddings:
   provider: "openai"
   openai:
     model: "nomic-ai/nomic-embed-text-v1.5"
-    base_url: "http://localhost:8082/v1"
+    base_url: "http://embedding:8000/v1"
     api_key: "test"
     check_embedding_ctx_length: false
     tiktoken_enabled: false
@@ -105,17 +105,17 @@ extraction:
   ocr:
     enabled: true
     provider: "paddle" # "tesseract" | "paddle" | "docling" | "deepseek"
-    fallback_chain: ["paddle", "paddle", "deepseek"]
+    fallback_chain: ["paddle", "tesseract"]
 
     tesseract:
       lang: "vie+eng"
       render_scale: 4.0
       tesseract_cmd: ""
       config_options: ""
-      
+
     paddle:
-      api_url: "http://localhost:8082/v1/chat/completions"
-      model: "mlx-community/PaddleOCR-VL-1.5-bf16"
+      api_url: "http://paddleocr:8000/v1"
+      model: "PaddlePaddle/PaddleOCR-VL-1.5"
       lang: "vi"
       use_angle_cls: true
       use_gpu: false

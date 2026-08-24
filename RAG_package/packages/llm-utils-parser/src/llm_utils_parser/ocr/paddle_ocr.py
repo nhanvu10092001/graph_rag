@@ -19,9 +19,9 @@ class PaddleOCRProvider(BaseOCR):
     """OCR using an external OpenAI-compatible Paddle OCR-VL API via OpenAI SDK client.
 
     Config (under extraction.ocr.paddle):
-        base_url / api_url: "http://localhost:8082/v1"
+        base_url / api_url: "http://paddleocr:8000/v1"
         api_key: "EMPTY"
-        model: "mlx-community/PaddleOCR-VL-1.5-bf16"
+        model: "PaddlePaddle/PaddleOCR-VL-1.5"
         lang: "vi"
         prompt: "Extract all text from this image."
         timeout: 120.0
@@ -31,7 +31,7 @@ class PaddleOCRProvider(BaseOCR):
         self.config = config or {}
 
         # Resolve base_url from config (support api_url or base_url)
-        raw_url = self.config.get("base_url") or self.config.get("api_url", "http://localhost:8082/v1")
+        raw_url = self.config.get("base_url") or self.config.get("api_url", "http://paddleocr:8000/v1")
         if raw_url.endswith("/chat/completions"):
             raw_url = raw_url[:-len("/chat/completions")]
         elif raw_url.endswith("/ocr"):
@@ -39,7 +39,7 @@ class PaddleOCRProvider(BaseOCR):
 
         self.base_url = raw_url.rstrip("/")
         self.api_key = self.config.get("api_key", "EMPTY")
-        self.model = self.config.get("model", "mlx-community/PaddleOCR-VL-1.5-bf16")
+        self.model = self.config.get("model", "PaddlePaddle/PaddleOCR-VL-1.5")
         self.lang = self.config.get("lang", "vi")
         self.prompt = self.config.get("prompt", DEFAULT_PROMPT)
         self.timeout = float(self.config.get("timeout", 120.0))

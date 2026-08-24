@@ -3,8 +3,19 @@
 % =============================================================================
 % PREAMBLE & PACKAGES
 % =============================================================================
-\usepackage[utf8]{inputenc}
-\usepackage[vietnamese]{babel}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T5,T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage[vietnamese]{babel}
+  \usepackage{lmodern}
+\else
+  \usepackage{fontspec}
+  \setmainfont{Liberation Serif}
+  \setsansfont{Liberation Sans}
+  \setmonofont{Liberation Mono}
+  \usepackage[vietnamese]{babel}
+\fi
 \usepackage[top=2.5cm,bottom=2.5cm,left=3cm,right=2cm]{geometry}
 \usepackage{amsmath,amssymb,amsfonts,mathtools}
 \usepackage{graphicx}
@@ -52,6 +63,7 @@
 
 % Hyperlink setup
 \hypersetup{
+    unicode=true,
     colorlinks=true,
     linkcolor=navyblue,
     citecolor=darkgreen,
@@ -144,7 +156,7 @@ Hệ thống đóng góp các giải pháp đột phá trong lĩnh vực Biểu 
     \item \textbf{ARK (Adaptive Retriever of Knowledge) Multi-Agent Exploration:} Áp dụng thuật toán khám phá quỹ đạo đa tác thể theo bài báo ACL 2026, kết hợp chiến lược dung hợp thứ hạng bỏ phiếu (\textbf{Voting Rank Fusion}) để tối ưu hóa đồng thời chiều rộng và chiều sâu truy xuất.
 \end{enumerate}
 
-Kết quả thực nghiệm trên tập dữ liệu benchmark minh chứng HLG LLM Utils đạt chỉ số \textbf{Faithfulness} 0.94, \textbf{Context Precision} 0.89 và tỷ lệ thực thi Cypher thành công đạt 96.8\%, vượt trội hoàn toàn so với mô hình Naive RAG truyền thống.
+Báo cáo trình bày chi tiết kiến trúc, các thuật toán cốt lõi và quy trình tích hợp toàn diện của hệ thống HLG LLM Utils, mở ra hướng tiếp cận hiệu quả cho bài toán biểu diễn tri thức và truy xuất thông tin nâng cao.
 
 \textbf{Từ khóa:} Graph RAG, Knowledge Representation, Knowledge Graph, Hierarchical Leiden Algorithm, Cypher Self-Correction, Multi-Agent Systems, LangGraph, FastMCP, Monorepo uv.
 
@@ -428,56 +440,10 @@ Hệ thống sử dụng ba cơ sở dữ liệu chuyên biệt hoạt động s
 Mô-đun \texttt{llm-utils-mcp} cho phép đóng gói toàn bộ các dịch vụ tìm kiếm Graph RAG thành một máy chủ MCP tiêu chuẩn dựa trên \texttt{FastMCP}. Thông qua công cụ chuyển đổi MCPO, các công cụ này tự động mở rộng thành giao diện chuẩn RESTful OpenAPI tại cổng \texttt{8001}, cho phép các hệ thống bên ngoài gọi trực tiếp dịch vụ Graph RAG.
 
 % =============================================================================
-\chapter{Đánh Giá Thực Nghiệm và Phân Tích Kết Quả}
-% =============================================================================
-
-\section{Thiết Lập Thực Nghiệm và Tập Dữ Liệu}
-Chúng tôi tiến hành thực nghiệm đánh giá hiệu năng trên tập tài liệu kỹ thuật nội bộ và bài báo khoa học với tổng dung lượng hơn 200 trang văn bản.
-
-Hệ thống được đánh giá qua khung đo lường tiêu chuẩn \textbf{RAGAS} (Retrieval Augmented Generation Assessment) \cite{espejel2023ragas} bao gồm 4 chỉ số cốt lõi:
-\begin{itemize}
-    \item \textbf{Faithfulness:} Tỷ lệ các khẳng định trong câu trả lời được hỗ trợ trực tiếp bởi ngữ cảnh truy xuất.
-    \item \textbf{Answer Relevance:} Mức độ tương đồng ngữ nghĩa giữa câu trả lời tạo ra và câu hỏi người dùng.
-    \item \textbf{Context Precision:} Tỷ lệ các đoạn ngữ cảnh thực sự có ích trong tổng số ngữ cảnh truy xuất.
-    \item \textbf{Context Recall:} Mức độ thông tin từ câu trả lời chuẩn (Ground Truth) có mặt trong ngữ cảnh truy xuất.
-\end{itemize}
-
-\section{Kết Quả So Sánh Hiệu Năng}
-Bảng \ref{tab:benchmark_results} thể hiện kết quả so sánh chi tiết giữa mô hình Naive RAG, Graph RAG tiêu chuẩn và hệ thống \textbf{HLG Hybrid Graph RAG} của chúng tôi.
-
-\begin{table}[h!]
-\centering
-\caption{Bảng So Sánh Hiệu Năng Chi Tiết Giữa Các Mô Hình}
-\label{tab:benchmark_results}
-\small
-\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{4.8cm} >{\centering\arraybackslash}p{2.6cm} >{\centering\arraybackslash}p{2.6cm} >{\centering\arraybackslash}p{3.0cm}}
-\toprule
-\textbf{Chỉ Số Đánh Giá (RAGAS)} & \shortstack{\textbf{Naive RAG}\\\small(Vector-only)} & \shortstack{\textbf{Standard}\\\small Graph RAG} & \shortstack{\textbf{HLG Hybrid}\\\small Graph RAG (Ours)} \\
-\midrule
-\textbf{Faithfulness} & 0.74 & 0.86 & \textbf{0.94} \\
-\textbf{Answer Relevance} & 0.79 & 0.88 & \textbf{0.93} \\
-\textbf{Context Precision} & 0.68 & 0.81 & \textbf{0.89} \\
-\textbf{Context Recall} & 0.65 & 0.83 & \textbf{0.92} \\
-\textbf{Global Query Score} & 0.35 & 0.78 & \textbf{0.91} \\
-\textbf{Cypher Execution Success} & N/A & 72.4\% & \textbf{96.8\%} \\
-\textbf{Avg Latency (Local Search)} & \textbf{1.2s} & 2.8s & 2.1s \\
-\textbf{Avg Latency (Global Search)} & 4.5s & 8.2s & \textbf{5.4s} \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\section{Phân Tích Kết Quả}
-Kết quả thực nghiệm chứng minh rằng:
-\begin{enumerate}
-    \item \textbf{Vượt trội về Global Query:} HLG Hybrid Graph RAG đạt điểm số truy vấn toàn cục 0.91, vượt xa mức 0.35 của Naive RAG nhờ việc khai thác hiệu quả các bản tóm tắt cộng đồng phân cấp Leiden.
-    \item \textbf{Hiệu quả của Máy Trạng Thái Tự Sửa Lỗi:} Tỷ lệ thực thi truy vấn Cypher thành công tăng từ 72.4\% lên 96.8\% nhờ cơ chế sửa lỗi 3 vòng lặp bằng LangGraph, loại bỏ hầu hết các lỗi cú pháp và lệch lược đồ.
-\end{enumerate}
-
-% =============================================================================
 \chapter{Thảo Luận, Thách Thức và Hướng Phát Triển}
 % =============================================================================
 
-\section{Thảo Luận Kết Quả}
+\section{Thảo Luận}
 Việc kết hợp giữa cấu trúc biểu tượng (Đồ thị Neo4j) và biểu diễn phi biểu tượng (Vector Embeddings) cho phép hệ thống HLG LLM Utils vừa đảm bảo tính chính xác tuyệt đối của các mối quan hệ thực thể, vừa duy trì khả năng tìm kiếm linh hoạt theo ngữ nghĩa.
 
 \section{Những Thách Thức Kỹ Thuật}
@@ -497,7 +463,7 @@ Việc kết hợp giữa cấu trúc biểu tượng (Đồ thị Neo4j) và bi
 % =============================================================================
 
 \section{Kết Luận}
-Nghiên cứu này đã xây dựng thành công khung công cụ \textbf{HLG LLM Utils}, một giải pháp toàn diện cho bài toán Biểu diễn Tri thức và Truy xuất Thông tin Nâng cao. Sự kết hợp giữa Property Knowledge Graph Neo4j, Thuật toán Phân hoạch Leiden Phân cấp, Đồ thị Trạng thái LangGraph Tự Sửa lỗi Cypher và Khám phá Đa tác thể ARK đã giải quyết triệt để các hạn chế của Naive RAG, mang lại hiệu năng cao và độ chính xác vượt trội.
+Nghiên cứu này đã xây dựng thành công khung công cụ \textbf{HLG LLM Utils}, một giải pháp toàn diện cho bài toán Biểu diễn Tri thức và Truy xuất Thông tin Nâng cao. Sự kết hợp giữa Property Knowledge Graph Neo4j, Thuật toán Phân hoạch Leiden Phân cấp, Đồ thị Trạng thái LangGraph Tự Sửa lỗi Cypher và Khám phá Đa tác thể ARK tạo nên một nền tảng vững chắc, giải quyết các hạn chế cố hữu của Naive RAG về mặt ngữ cảnh toàn cục và suy luận đa bước.
 
 \section{Bảng Phân Công Nhiệm Vụ Nhóm}
 
@@ -523,7 +489,7 @@ Nghiên cứu này đã xây dựng thành công khung công cụ \textbf{HLG LL
 \item Cài đặt máy trạng thái LangGraph Tự Sửa Lỗi Cypher (\texttt{workflow/graph.py}).
 \item Cài đặt mô hình Đa tác thể Khám phá ARK (\texttt{ark\_agent.py}, \texttt{ark\_retriever.py}).
 \item Xây dựng hệ thống Backend FastAPI và tích hợp cơ sở dữ liệu Qdrant / PGVector.
-\item Thực hiện đánh giá thực nghiệm RAGAS và tối ưu hóa hiệu năng.
+\item Tối ưu hóa hiệu năng truy xuất và hoàn thiện tích hợp hệ thống.
 \end{itemize} & 50\% \\
 \bottomrule
 \end{tabularx}

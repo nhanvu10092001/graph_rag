@@ -3,8 +3,19 @@
 % =============================================================================
 % PREAMBLE & PACKAGES
 % =============================================================================
-\usepackage[utf8]{inputenc}
-\usepackage[english]{babel}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage[english]{babel}
+  \usepackage{lmodern}
+\else
+  \usepackage{fontspec}
+  \setmainfont{Liberation Serif}
+  \setsansfont{Liberation Sans}
+  \setmonofont{Liberation Mono}
+  \usepackage[english]{babel}
+\fi
 \usepackage[top=2.5cm,bottom=2.5cm,left=3cm,right=2cm]{geometry}
 \usepackage{amsmath,amssymb,amsfonts,mathtools}
 \usepackage{graphicx}
@@ -56,6 +67,7 @@
 
 % Hyperlink setup
 \hypersetup{
+    unicode=true,
     colorlinks=true,
     linkcolor=navyblue,
     citecolor=darkgreen,
@@ -147,7 +159,7 @@ Our framework introduces key contributions in Knowledge Representation and Infor
     \item \textbf{ARK Autonomous Multi-Agent Exploration:} Implementing the ACL 2026 Adaptive Retriever of Knowledge algorithm to dynamically adjust breadth-depth graph traversal with Voting Rank Fusion (VRF).
 \end{enumerate}
 
-Empirical evaluations on benchmark datasets using RAGAS metrics show that HLG LLM Utils achieves 0.94 Faithfulness, 0.89 Context Precision, and a 96.8\% Cypher execution success rate, substantially outperforming standard Naive RAG baselines.
+This report comprehensively details the system architecture, core algorithms, and end-to-end integration workflows of the HLG LLM Utils framework.
 
 \textbf{Keywords:} Graph RAG, Knowledge Representation, Hierarchical Leiden Algorithm, Cypher Self-Correction, Multi-Agent Systems, LangGraph, FastMCP.
 
@@ -353,34 +365,6 @@ A LangGraph state machine translates natural language to Cypher with an automate
 \end{figure}
 
 % =============================================================================
-\chapter{Experimental Evaluation \& Benchmark Results}
-% =============================================================================
-
-\section{Experimental Setup \& RAGAS Benchmarks}
-We evaluated performance on technical documentation and academic research papers using RAGAS metrics \cite{espejel2023ragas}.
-
-\begin{table}[h!]
-\centering
-\caption{Quantitative Performance Benchmark Comparison}
-\label{tab:benchmark_results_en}
-\small
-\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{4.8cm} >{\centering\arraybackslash}p{2.6cm} >{\centering\arraybackslash}p{2.6cm} >{\centering\arraybackslash}p{3.0cm}}
-\toprule
-\textbf{Evaluation Metric (RAGAS)} & \shortstack{\textbf{Naive RAG}\\\small(Vector-only)} & \shortstack{\textbf{Standard}\\\small Graph RAG} & \shortstack{\textbf{HLG Hybrid}\\\small Graph RAG (Ours)} \\
-\midrule
-\textbf{Faithfulness} & 0.74 & 0.86 & \textbf{0.94} \\
-\textbf{Answer Relevance} & 0.79 & 0.88 & \textbf{0.93} \\
-\textbf{Context Precision} & 0.68 & 0.81 & \textbf{0.89} \\
-\textbf{Context Recall} & 0.65 & 0.83 & \textbf{0.92} \\
-\textbf{Global Query Score} & 0.35 & 0.78 & \textbf{0.91} \\
-\textbf{Cypher Execution Success} & N/A & 72.4\% & \textbf{96.8\%} \\
-\textbf{Avg Latency (Local Search)} & \textbf{1.2s} & 2.8s & 2.1s \\
-\textbf{Avg Latency (Global Search)} & 4.5s & 8.2s & \textbf{5.4s} \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-% =============================================================================
 \chapter{Conclusion \& Task Division}
 % =============================================================================
 
@@ -411,7 +395,7 @@ The \textbf{HLG LLM Utils} framework successfully addresses the shortcomings of 
 \item Built LangGraph Cypher Query Self-Correction state graph (\texttt{workflow/graph.py}).
 \item Implemented ARK Autonomous Multi-Agent Traversal framework (\texttt{ark\_agent.py}, \texttt{ark\_retriever.py}).
 \item Engineered FastAPI backend and Qdrant / PGVector integrations.
-\item Conducted RAGAS benchmark evaluations.
+\item Optimized retrieval performance and finalized system integration.
 \end{itemize} & 50\% \\
 \bottomrule
 \end{tabularx}

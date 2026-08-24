@@ -19,27 +19,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy and install RAG_package workspace member packages
-COPY RAG_package /app/RAG_package
-WORKDIR /app/RAG_package
-RUN uv pip install --system \
-    -e packages/llm-utils-core \
-    -e packages/llm-utils-llm \
-    -e packages/llm-utils-vector \
-    -e packages/llm-utils-parser \
-    -e packages/llm-utils-reranker \
-    -e packages/llm-utils-rag \
-    -e packages/llm-utils-graph-rag \
-    -e packages/llm-utils-subagent \
-    -e packages/llm-utils-mcp \
-    -e packages/agent_tool_packages
+# 1. Copy dependencies first for Docker layer caching
+COPY BE/requirements.txt /app/BE/requirements.txt
+RUN uv pip install --system -r /app/BE/requirements.txt
 
-# Copy Backend application
+# 2. Copy and install RAG_package workspace member packages in editable mode
+COPY RAG_package /app/RAG_package
+RUN uv pip install --system \
+    -e /app/RAG_package/packages/llm-utils-core \
+    -e /app/RAG_package/packages/llm-utils-llm \
+    -e /app/RAG_package/packages/llm-utils-vector \
+    -e /app/RAG_package/packages/llm-utils-parser \
+    -e /app/RAG_package/packages/llm-utils-reranker \
+    -e /app/RAG_package/packages/llm-utils-rag \
+    -e /app/RAG_package/packages/llm-utils-graph-rag \
+    -e /app/RAG_package/packages/llm-utils-subagent \
+    -e /app/RAG_package/packages/llm-utils-mcp \
+    -e /app/RAG_package/packages/agent_tool_packages
+
+# 3. Copy Backend application source code
 COPY BE /app/BE
 WORKDIR /app/BE
-
-# Install Backend Python requirements
-RUN uv pip install --system -r requirements.txt
 
 EXPOSE 8000
 

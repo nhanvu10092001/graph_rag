@@ -2,7 +2,12 @@
 
 import logging
 from typing import Any, Dict, List, Optional
-from langchain_community.graphs import Neo4jGraph
+
+try:
+    from langchain_neo4j import Neo4jGraph
+except ImportError:
+    from langchain_community.graphs import Neo4jGraph
+
 from .config import Neo4jConfig
 
 logger = logging.getLogger(__name__)

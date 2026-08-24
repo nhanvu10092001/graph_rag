@@ -20,5 +20,10 @@ alembic upgrade head
 echo "Database migrations completed successfully."
 
 # Start FastAPI Uvicorn server
-echo "Starting FastAPI server..."
-exec uvicorn app.main:app --host "${SERVER_HOST:-0.0.0.0}" --port "${SERVER_PORT:-8000}"
+echo "Starting FastAPI server with reload..."
+exec uvicorn app.main:app \
+    --host "${SERVER_HOST:-0.0.0.0}" \
+    --port "${SERVER_PORT:-8000}" \
+    --reload \
+    --reload-dir /app/BE/app \
+    --reload-dir /app/RAG_package/packages

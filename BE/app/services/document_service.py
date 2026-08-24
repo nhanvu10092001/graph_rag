@@ -100,7 +100,7 @@ async def index_document_background(doc_id: int, minio_key: str, filename: str):
         )
         logger.info(f"Document {doc_id} ('{filename}') indexed successfully. Entities: {entity_count}, Relations: {relationship_count}")
     except Exception as e:
-        logger.error(f"Failed to index document {doc_id} ('{filename}'): {e}")
+        logger.error(f"Failed to index document {doc_id} ('{filename}'): {e}", exc_info=True)
         update_document_status(doc_id, "failed")
 
 

@@ -104,7 +104,7 @@ class CommunityDetectionService:
                     self._summarize_community(comm_id, level)
                     total_summaries += 1
                 except Exception as e:
-                    logger.error(f"Failed to summarize community {comm_id} at level {level}: {e}")
+                    logger.error(f"Failed to summarize community {comm_id} at level {level}: {e}", exc_info=True)
 
         return {
             "status": "success",
@@ -462,7 +462,7 @@ class CommunityDetectionService:
                 else:
                     report_dict = json.loads(response_text)
             except Exception as e:
-                logger.error(f"Failed to generate/parse community summary: {e}")
+                logger.error(f"Failed to generate/parse community summary: {e}", exc_info=True)
                 report_dict = {
                     "title": f"Community {community_id}",
                     "summary": f"A group of {len(entities_result)} related entities.",

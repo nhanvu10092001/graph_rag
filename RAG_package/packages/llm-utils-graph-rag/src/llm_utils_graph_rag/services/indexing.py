@@ -97,7 +97,7 @@ class GraphIndexingService:
             structured_llm = self.llm.with_structured_output(ExtractionResult)
             result = structured_llm.invoke(prompt)
         except Exception as e:
-            logger.error(f"Structured extraction failed: {e}")
+            logger.error(f"Structured extraction failed: {e}", exc_info=True)
             return {"status": "error", "error": f"Extraction failure: {e}"}
 
         entities = result.entities

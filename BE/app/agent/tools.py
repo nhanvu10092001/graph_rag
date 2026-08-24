@@ -139,7 +139,7 @@ def query_knowledge_graph(
                 else:
                     return f"Query: '{query}'. ARK Trajectory Search Results:\n{context_str}"
             except Exception as e:
-                logger.error(f"Error executing ARK search: {e}")
+                logger.error(f"Error executing ARK search: {e}", exc_info=True)
                 if ark_config.get("fallback_to_local", True):
                     logger.warning("Falling back to LOCAL search due to ARK error.")
                     search_mode = "local"
@@ -157,7 +157,7 @@ def query_knowledge_graph(
         return f"Query: '{query}'. Knowledge Graph Subgraph Results:\n{context_str}"
 
     except Exception as e:
-        logger.error(f"Error querying knowledge graph tool: {e}")
+        logger.error(f"Error querying knowledge graph tool: {e}", exc_info=True)
         return f"Error occurred while querying Knowledge Graph: {str(e)}"
 
 

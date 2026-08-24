@@ -178,7 +178,7 @@ async def _stream_to_ws(websocket: WebSocket, messages: List[Message]) -> None:
         raise
 
     except Exception as e:
-        logger.error(f"Error during agent execution stream: {e}")
+        logger.error(f"Error during agent execution stream: {e}", exc_info=True)
         try:
             await websocket.send_json({"type": "error", "error": str(e)})
         except Exception:

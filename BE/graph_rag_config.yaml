@@ -137,6 +137,13 @@ extraction:
 
 
 # -----------------------------------------------------------------------------
+# Graph Extraction Configuration (Entity/Relationship/Claim extraction)
+# -----------------------------------------------------------------------------
+graph_extraction:
+  max_gleaning_rounds: 0     # 0 = disabled (default). Paper recommends 1-2.
+  extract_claims: false       # Claims/covariates extraction (disabled by default)
+
+# -----------------------------------------------------------------------------
 # Community Detection Configuration (Microsoft GraphRAG-inspired)
 # -----------------------------------------------------------------------------
 community_detection:

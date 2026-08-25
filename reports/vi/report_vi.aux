@@ -13,14 +13,6 @@
 \@writefile{toc}{\contentsline {section}{\numberline {1.1}Bối Cảnh Nghiên Cứu}{1}{section.1.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {1.2}Những Hạn Chế của Naive RAG}{1}{section.1.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {1.3}Động Cơ và Mục Tiêu Nghiên Cứu}{1}{section.1.3}\protected@file@percent }
-\citation{ji2022survey}
-\citation{quillian1968semantic}
-\citation{minsky1974frame}
-\citation{baader2003description}
-\citation{reimers2019sentencebert}
-\citation{cormack2009rrf}
-\citation{robertson2009bm25}
-\citation{traag2019leiden}
 \@writefile{toc}{\contentsline {chapter}{\numberline {2}Cơ Sở Lý Thuyết và Các Nghiên Cứu Liên Quan}{3}{chapter.2}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
@@ -36,65 +28,50 @@
 \@writefile{lot}{\addvspace {10\p@ }}
 \@writefile{toc}{\contentsline {section}{\numberline {3.1}Hình Thức Hóa Property Knowledge Graph}{5}{section.3.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3.2}Lược Đồ Cơ Sở Dữ Liệu Neo4j (Graph Schema Design)}{5}{section.3.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3.1}{\ignorespaces Cấu trúc Thuộc tính của các Đỉnh trong Neo4j Schema}}{5}{table.3.1}\protected@file@percent }
-\newlabel{tab:node_schema}{{3.1}{5}{Cấu trúc Thuộc tính của các Đỉnh trong Neo4j Schema}{table.3.1}{}}
+\citation{edge2024graphrag}
+\@writefile{lot}{\contentsline {table}{\numberline {3.1}{\ignorespaces Cấu trúc Thuộc tính của các Đỉnh trong Neo4j Schema}}{6}{table.3.1}\protected@file@percent }
+\newlabel{tab:node_schema}{{3.1}{6}{Cấu trúc Thuộc tính của các Đỉnh trong Neo4j Schema}{table.3.1}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3.3}Quy Trình Trích Xuất Bộ Ba (Triplet Extraction Taxonomy)}{6}{section.3.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {chapter}{\numberline {4}Kiến Trúc Hệ Thống và Thiết Kế Monorepo Modular}{7}{chapter.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.1}Trích Xuất Phát Biểu Tri Thức (Claims/Covariates Extraction)}{6}{subsection.3.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.2}Cơ Chế Gleaning (Trích Xuất Lặp Tinh Lọc)}{6}{subsection.3.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{\numberline {4}Kiến Trúc Hệ Thống và Thiết Kế Monorepo Modular}{8}{chapter.4}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
-\@writefile{toc}{\contentsline {section}{\numberline {4.1}Tổng Quan Kiến Trúc UV Workspace}{7}{section.4.1}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {4.1}{\ignorespaces Sơ đồ Phụ thuộc Mô-đun trong uv Workspace Monorepo}}{7}{figure.4.1}\protected@file@percent }
-\newlabel{fig:monorepo_arch}{{4.1}{7}{Sơ đồ Phụ thuộc Mô-đun trong uv Workspace Monorepo}{figure.4.1}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4.2}Phân Tích Chi Tiết Các Gói Core}{7}{section.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4.3}Tích Hợp Backend (FastAPI) và Frontend (React)}{8}{section.4.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {chapter}{\numberline {5}Các Thuật Toán Tìm Kiếm và Suy Luận Nâng Cao}{9}{chapter.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.1}Tổng Quan Kiến Trúc UV Workspace}{8}{section.4.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4.1}{\ignorespaces Sơ đồ Phụ thuộc Mô-đun trong uv Workspace Monorepo}}{8}{figure.4.1}\protected@file@percent }
+\newlabel{fig:monorepo_arch}{{4.1}{8}{Sơ đồ Phụ thuộc Mô-đun trong uv Workspace Monorepo}{figure.4.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4.2}Phân Tích Chi Tiết Các Gói Core}{8}{section.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.3}Tích Hợp Backend (FastAPI) và Frontend (React)}{9}{section.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{\numberline {5}Các Thuật Toán Tìm Kiếm và Suy Luận Nâng Cao}{10}{chapter.5}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
-\@writefile{toc}{\contentsline {section}{\numberline {5.1}Thuật Toán Phân Hoạch Leiden và Tóm Tắt Phân Cấp}{9}{section.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5.2}Tìm Kiếm Toàn Cục Theo Mô Hình Map-Reduce}{9}{section.5.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5.3}Máy Trạng Thái Tự Sửa Lỗi Truy Vấn Cypher (LangGraph)}{10}{section.5.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {5.1}{\ignorespaces Đồ thị Trạng thái LangGraph Tự Sửa Lỗi Truy Vấn Cypher}}{10}{figure.5.1}\protected@file@percent }
-\newlabel{fig:cypher_state_graph}{{5.1}{10}{Đồ thị Trạng thái LangGraph Tự Sửa Lỗi Truy Vấn Cypher}{figure.5.1}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5.4}Khám Phá Đồ Thị Đa Tác Thể ARK}{10}{section.5.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {chapter}{\numberline {6}Cài Đặt Hệ Thống và Tích Hợp Kỹ Thuật}{11}{chapter.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5.1}Thuật Toán Phân Hoạch Leiden và Tóm Tắt Phân Cấp}{10}{section.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5.2}Tìm Kiếm Toàn Cục Theo Mô Hình Map-Reduce}{10}{section.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5.3}Máy Trạng Thái Tự Sửa Lỗi Truy Vấn Cypher (LangGraph)}{11}{section.5.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5.1}{\ignorespaces Đồ thị Trạng thái LangGraph Tự Sửa Lỗi Truy Vấn Cypher}}{11}{figure.5.1}\protected@file@percent }
+\newlabel{fig:cypher_state_graph}{{5.1}{11}{Đồ thị Trạng thái LangGraph Tự Sửa Lỗi Truy Vấn Cypher}{figure.5.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.4}Khám Phá Đồ Thị Đa Tác Thể ARK}{11}{section.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{\numberline {6}Cài Đặt Hệ Thống và Tích Hợp Kỹ Thuật}{12}{chapter.6}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
-\@writefile{toc}{\contentsline {section}{\numberline {6.1}Tích Hợp Cơ Sở Dữ Liệu và Lưu Trữ Object}{11}{section.6.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6.2}Tự Động Hóa Công Cụ Qua Model Context Protocol (MCP)}{11}{section.6.2}\protected@file@percent }
-\citation{espejel2023ragas}
-\@writefile{toc}{\contentsline {chapter}{\numberline {7}Đánh Giá Thực Nghiệm và Phân Tích Kết Quả}{12}{chapter.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6.1}Tích Hợp Cơ Sở Dữ Liệu và Lưu Trữ Object}{12}{section.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6.2}Tự Động Hóa Công Cụ Qua Model Context Protocol (MCP)}{12}{section.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{\numberline {7}Thảo Luận, Thách Thức và Hướng Phát Triển}{13}{chapter.7}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
-\@writefile{toc}{\contentsline {section}{\numberline {7.1}Thiết Lập Thực Nghiệm và Tập Dữ Liệu}{12}{section.7.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7.2}Kết Quả So Sánh Hiệu Năng}{12}{section.7.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7.3}Phân Tích Kết Quả}{12}{section.7.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {7.1}{\ignorespaces Bảng So Sánh Hiệu Năng Chi Tiết Giữa Các Mô Hình}}{13}{table.7.1}\protected@file@percent }
-\newlabel{tab:benchmark_results}{{7.1}{13}{Bảng So Sánh Hiệu Năng Chi Tiết Giữa Các Mô Hình}{table.7.1}{}}
-\@writefile{toc}{\contentsline {chapter}{\numberline {8}Thảo Luận, Thách Thức và Hướng Phát Triển}{14}{chapter.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7.1}Thảo Luận}{13}{section.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7.2}Những Thách Thức Kỹ Thuật}{13}{section.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7.3}Hướng Phát Triển Trong Tương Lai}{13}{section.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{\numberline {8}Kết Luận và Phân Công Nhiệm Vụ}{14}{chapter.8}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
-\@writefile{toc}{\contentsline {section}{\numberline {8.1}Thảo Luận Kết Quả}{14}{section.8.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {8.2}Những Thách Thức Kỹ Thuật}{14}{section.8.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {8.3}Hướng Phát Triển Trong Tương Lai}{14}{section.8.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {chapter}{\numberline {9}Kết Luận và Phân Công Nhiệm Vụ}{15}{chapter.9}\protected@file@percent }
-\@writefile{lof}{\addvspace {10\p@ }}
-\@writefile{lot}{\addvspace {10\p@ }}
-\@writefile{toc}{\contentsline {section}{\numberline {9.1}Kết Luận}{15}{section.9.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {9.2}Bảng Phân Công Nhiệm Vụ Nhóm}{15}{section.9.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {9.1}{\ignorespaces Bảng Phân Công Nhiệm Vụ Chi Tiết Giữa Các Thành Viên}}{15}{table.9.1}\protected@file@percent }
-\newlabel{tab:task_division}{{9.1}{15}{Bảng Phân Công Nhiệm Vụ Chi Tiết Giữa Các Thành Viên}{table.9.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {8.1}Kết Luận}{14}{section.8.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8.2}Bảng Phân Công Nhiệm Vụ Nhóm}{14}{section.8.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8.1}{\ignorespaces Bảng Phân Công Nhiệm Vụ Chi Tiết Giữa Các Thành Viên}}{14}{table.8.1}\protected@file@percent }
+\newlabel{tab:task_division}{{8.1}{14}{Bảng Phân Công Nhiệm Vụ Chi Tiết Giữa Các Thành Viên}{table.8.1}{}}
 \bibstyle{plain}
 \bibdata{references}
-\bibcite{baader2003description}{1}
-\bibcite{cormack2009rrf}{2}
-\bibcite{edge2024graphrag}{3}
-\bibcite{espejel2023ragas}{4}
-\bibcite{ji2022survey}{5}
-\bibcite{minsky1974frame}{6}
-\bibcite{polonuer2026ark}{7}
-\bibcite{quillian1968semantic}{8}
-\bibcite{reimers2019sentencebert}{9}
-\bibcite{robertson2009bm25}{10}
-\bibcite{traag2019leiden}{11}
-\@writefile{toc}{\contentsline {chapter}{Tài Liệu Tham Khảo}{16}{table.9.1}\protected@file@percent }
-\gdef \@abspage@last{22}
+\bibcite{edge2024graphrag}{1}
+\bibcite{polonuer2026ark}{2}
+\@writefile{toc}{\contentsline {chapter}{Tài Liệu Tham Khảo}{15}{table.8.1}\protected@file@percent }
+\gdef \@abspage@last{21}

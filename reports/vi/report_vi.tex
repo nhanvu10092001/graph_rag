@@ -150,7 +150,7 @@ Các hệ thống \textbf{Naive RAG} (Retrieval-Augmented Generation) dựa trê
 
 Hệ thống đóng góp các giải pháp đột phá trong lĩnh vực Biểu diễn Tri thức (Knowledge Representation) và Truy xuất Thông tin:
 \begin{enumerate}[leftmargin=*]
-    \item \textbf{Property Knowledge Graph Formalization:} Tự động trích xuất các \textit{Entity}, \textit{Relationship} và thuộc tính từ văn bản phi cấu trúc, lưu trữ trên cơ sở dữ liệu đồ thị Neo4j.
+    \item \textbf{Property Knowledge Graph Formalization:} Tự động trích xuất các \textit{Entity}, \textit{Relationship} và \textit{Claim} (phát biểu tri thức) từ văn bản phi cấu trúc, lưu trữ trên cơ sở dữ liệu đồ thị Neo4j. Hỗ trợ cơ chế \textbf{Gleaning} (trích xuất lặp tinh lọc) để tối đa hóa mức độ bao phủ tri thức.
     \item \textbf{Hierarchical Leiden Community Detection:} Phân hoạch đồ thị thực thể thành cấu trúc cây cộng đồng đa cấp độ, kết hợp tóm tắt ngữ nghĩa bằng LLM theo mô hình \textbf{Map-Reduce} để phục vụ truy vấn toàn cục (\textbf{Global Search}).
     \item \textbf{Cypher Query Self-Correction State Machine:} Cài đặt đồ thị trạng thái LangGraph cho phép LLM dịch ngôn ngữ tự nhiên thành truy vấn Cypher chuẩn xác, tự động phát hiện và sửa lỗi cú pháp/lược đồ thông qua phản hồi từ Neo4j execution log.
     \item \textbf{ARK (Adaptive Retriever of Knowledge) Multi-Agent Exploration:} Áp dụng thuật toán khám phá quỹ đạo đa tác thể theo bài báo ACL 2026, kết hợp chiến lược dung hợp thứ hạng bỏ phiếu (\textbf{Voting Rank Fusion}) để tối ưu hóa đồng thời chiều rộng và chiều sâu truy xuất.
@@ -195,7 +195,7 @@ Qua quá trình phân tích lý thuyết và thực nghiệm, chúng tôi xác �
 
 Mục tiêu cụ thể của báo cáo bao gồm:
 \begin{itemize}
-    \item Hình thức hóa mô hình Biểu diễn Tri thức \textbf{Property Knowledge Graph} trên Neo4j.
+    \item Hình thức hóa mô hình Biểu diễn Tri thức \textbf{Property Knowledge Graph} trên Neo4j, bao gồm trích xuất thực thể, quan hệ và phát biểu tri thức (Claims/Covariates) với cơ chế Gleaning tinh lọc.
     \item Cài đặt thuật toán \textbf{Hierarchical Leiden Community Detection} nhằm hỗ trợ truy vấn toàn cục (\textbf{Global Search}) theo mô hình \textbf{Map-Reduce}.
     \item Xây dựng máy trạng thái tự sửa lỗi truy vấn Cypher bằng \textbf{LangGraph} nhằm đảm bảo tính chính xác khi chuyển đổi ngôn ngữ tự nhiên thành Cypher.
     \item Tích hợp mô hình đa tác thể \textbf{ARK (Adaptive Retriever of Knowledge)} cho phép tự động điều chỉnh độ rộng và độ sâu khi duyệt đồ thị.
@@ -207,17 +207,17 @@ Mục tiêu cụ thể của báo cáo bao gồm:
 % =============================================================================
 
 \section{Các Mô Hình Biểu Diễn Tri Thức}
-Biểu diễn Tri thức (\textbf{Knowledge Representation -- KR}) là một nhánh cốt lõi của Trí tuệ Nhân tạo, nghiên cứu cách thức đóng gói tri thức của thế giới thực vào máy tính để máy tính có thể suy luận và giải quyết các bài toán phức tạp \cite{ji2022survey}.
+Biểu diễn Tri thức (\textbf{Knowledge Representation -- KR}) là một nhánh cốt lõi của Trí tuệ Nhân tạo, nghiên cứu cách thức đóng gói tri thức của thế giới thực vào máy tính để máy tính có thể suy luận và giải quyết các bài toán phức tạp.
 
 \subsection{Từ Mạng Ngữ Nghĩa đến Property Knowledge Graph}
-Lịch sử phát triển của KR ghi nhận sự tiến hóa từ các Mạng Ngữ nghĩa (\textbf{Semantic Networks}) của Quillian \cite{quillian1968semantic}, Bộ khung Tri thức (\textbf{Frames}) của Minsky \cite{minsky1974frame}, Logic Mô tả (\textbf{Description Logics}) \cite{baader2003description}, đến các tiêu chuẩn Semantic Web (RDF/OWL).
+Lịch sử phát triển của KR ghi nhận sự tiến hóa từ các Mạng Ngữ nghĩa (\textbf{Semantic Networks}), Bộ khung Tri thức (\textbf{Frames}), Logic Mô tả (\textbf{Description Logics}), đến các tiêu chuẩn Semantic Web (RDF/OWL).
 
-Trong bối cảnh công nghiệp hiện đại, \textbf{Property Knowledge Graph (PKG)} nổi lên như một chuẩn mực hiệu năng cao. Khác với bộ ba RDF đơn thuần $(Subject, Predicate, Object)$, PKG cho phép gắn trực tiếp các cặp thuộc tính $(Key, Value)$ vào cả đỉnh (\textit{Node}) và cạnh (\textit{Edge}), giúp tối ưu hóa dung lượng lưu trữ và tốc độ truy vấn \cite{robinson2015graph}.
+Trong bối cảnh công nghiệp hiện đại, \textbf{Property Knowledge Graph (PKG)} nổi lên như một chuẩn mực hiệu năng cao. Khác với bộ ba RDF đơn thuần $(Subject, Predicate, Object)$, PKG cho phép gắn trực tiếp các cặp thuộc tính $(Key, Value)$ vào cả đỉnh (\textit{Node}) và cạnh (\textit{Edge}), giúp tối ưu hóa dung lượng lưu trữ và tốc độ truy vấn.
 
 \section{Không Gian Vector và Truy Xuất Lai (Hybrid Retrieval)}
-Bên cạnh cấu trúc biểu diễn biểu tượng (\textbf{Symbolic Knowledge}), các không gian vector nhúng biểu nghĩa (\textbf{Sub-symbolic Embeddings}) đóng vai trò quan trọng trong việc đo lường độ tương đồng ngữ nghĩa \cite{reimers2019sentencebert}.
+Bên cạnh cấu trúc biểu diễn biểu tượng (\textbf{Symbolic Knowledge}), các không gian vector nhúng biểu nghĩa (\textbf{Sub-symbolic Embeddings}) đóng vai trò quan trọng trong việc đo lường độ tương đồng ngữ nghĩa.
 
-Để đạt được hiệu năng truy xuất tối ưu, hệ thống áp dụng kỹ thuật Dung hợp Thứ hạng Tương hỗ (\textbf{Reciprocal Rank Fusion -- RRF}) \cite{cormack2009rrf} kết hợp giữa truy xuất từ khóa BM25 \cite{robertson2009bm25} và truy xuất vector nhúng:
+Để đạt được hiệu năng truy xuất tối ưu, hệ thống áp dụng kỹ thuật Dung hợp Thứ hạng Tương hỗ (\textbf{Reciprocal Rank Fusion -- RRF}) kết hợp giữa truy xuất từ khóa BM25 và truy xuất vector nhúng:
 \begin{equation}
 RRF(d \in D) = \sum_{m \in M} \frac{1}{k + r_m(d)}
 \end{equation}
@@ -226,7 +226,7 @@ Trong đó $M$ là tập hợp các bộ truy xuất (BM25, Vector, Graph), $r_m
 \section{Phân Hoạch Đồ Thị và Thuật Toán Leiden}
 Trong các mạng phức tạp, việc phát hiện các cấu trúc cộng đồng (\textbf{Community Detection}) giúp nhóm các thực thể có mối liên kết chặt chẽ thành các cụm ngữ nghĩa. Thuật toán Louvain từng được sử dụng phổ biến nhưng gặp phải lỗi phân mảnh cộng đồng không liên thông.
 
-Thuật toán Leiden \cite{traag2019leiden} khắc phục triệt để hạn chế này bằng cách bổ sung bước tinh lọc cục bộ (\textbf{Sub-community Refinement}). Hàm mục tiêu tối ưu hóa độ mô-đun (\textbf{Modularity Quality $\mathcal{H}$}) trong Leiden được hình thức hóa như sau:
+Thuật toán Leiden khắc phục triệt để hạn chế này bằng cách bổ sung bước tinh lọc cục bộ (\textbf{Sub-community Refinement}). Hàm mục tiêu tối ưu hóa độ mô-đun (\textbf{Modularity Quality $\mathcal{H}$}) trong Leiden được hình thức hóa như sau:
 \begin{equation}
 \mathcal{H} = \frac{1}{2m} \sum_{ij} \left( A_{ij} - \gamma \frac{k_i k_j}{2m} \right) \delta(\sigma_i, \sigma_j)
 \end{equation}
@@ -249,8 +249,8 @@ Trong đó:
 \begin{itemize}
     \item $V = \{v_1, v_2, \dots, v_n\}$ là tập hợp các đỉnh (\textit{Nodes}).
     \item $E \subseteq V \times \mathcal{R}_E \times V$ là tập hợp các cạnh có hướng (\textit{Edges}).
-    \item $\mathcal{L}_V = \{\text{Document}, \text{Chunk}, \text{Entity}, \text{Community}\}$ là tập các nhãn đỉnh.
-    \item $\mathcal{R}_E = \{\text{HAS\_CHUNK}, \text{MENTIONS}, \text{RELATED\_TO}, \text{BELONGS\_TO}, \text{PARENT\_OF}\}$ là tập các loại quan hệ.
+    \item $\mathcal{L}_V = \{\text{Document}, \text{Chunk}, \text{Entity}, \text{Community}, \text{Claim}\}$ là tập các nhãn đỉnh.
+    \item $\mathcal{R}_E = \{\text{HAS\_CHUNK}, \text{MENTIONS}, \text{RELATED\_TO}, \text{BELONGS\_TO}, \text{PARENT\_OF}, \text{HAS\_CLAIM}, \text{REFERENCES}\}$ là tập các loại quan hệ.
     \item $\Phi_V: V \times \mathcal{K} \to \mathcal{V}al$ là ánh xạ gán thuộc tính thuộc tập khóa $\mathcal{K}$ vào đỉnh.
     \item $\Phi_E: E \times \mathcal{K} \to \mathcal{V}al$ là ánh xạ gán thuộc tính vào cạnh.
 \end{itemize}
@@ -270,7 +270,8 @@ Hệ thống thiết kế 4 loại nhãn đỉnh chính trên Neo4j:
 \texttt{:Document} & \texttt{id, filename, status} & Định danh tài liệu gốc, tên tệp, trạng thái xử lý (\texttt{String}). \\[0.2cm]
 \texttt{:Chunk} & \texttt{id, text, index, embedding} & Đoạn văn bản nhỏ, nội dung thô, thứ tự đoạn, vector nhúng $\mathbb{R}^d$. \\[0.2cm]
 \texttt{:Entity} & \texttt{id, type, description, embedding} & Tên thực thể chuẩn hóa (ID), phân loại, mô tả tóm tắt, vector nhúng $\mathbb{R}^d$. \\[0.2cm]
-\texttt{:Community} & \texttt{id, level, title, summary, findings} & Định danh cộng đồng, cấp phân cấp ($l \in \mathbb{N}$), tiêu đề, tóm tắt LLM, chuỗi JSON kết quả. \\
+\texttt{:Community} & \texttt{id, level, title, summary, findings} & Định danh cộng đồng, cấp phân cấp ($l \in \mathbb{N}$), tiêu đề, tóm tắt LLM, chuỗi JSON kết quả. \\[0.2cm]
+\texttt{:Claim} & \texttt{id, subject\_id, claim\_type, claim\_status, description} & Phát biểu tri thức (Claim/Covariate): loại (FACTUAL, TEMPORAL, CAUSAL, QUANTITATIVE, STATUS\_CHANGE), trạng thái (STATED, INFERRED, DISPUTED), nội dung, ngày (\texttt{String}). \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -281,7 +282,9 @@ Các mối quan hệ giữa các đỉnh được thiết lập chặt chẽ:
 (c:\text{Chunk}) &\xrightarrow{\text{MENTIONS}} (e:\text{Entity}) \\
 (e_1:\text{Entity}) &\xrightarrow{\text{RELATED\_TO} \{\text{description, weight}\}} (e_2:\text{Entity}) \\
 (e:\text{Entity}) &\xrightarrow{\text{BELONGS\_TO} \{\text{level}\}} (c:\text{Community}) \\
-(c_1:\text{Community}) &\xrightarrow{\text{PARENT\_OF}} (c_2:\text{Community})
+(c_1:\text{Community}) &\xrightarrow{\text{PARENT\_OF}} (c_2:\text{Community}) \\
+(e:\text{Entity}) &\xrightarrow{\text{HAS\_CLAIM}} (cl:\text{Claim}) \\
+(cl:\text{Claim}) &\xrightarrow{\text{REFERENCES}} (e:\text{Entity})
 \end{align}
 
 \section{Quy Trình Trích Xuất Bộ Ba (Triplet Extraction Taxonomy)}
@@ -291,6 +294,23 @@ T_{extract}(C_k) \to \left( \{e_i = (\text{name}_i, \text{type}_i, \text{desc}_i
 \end{equation}
 
 Tất cả các tên thực thể $e_i$ đều được viết hoa và chuẩn hóa ký tự đầu cuối nhằm tránh trùng lặp dạng $e_{\text{upper}} = \text{UPPER}(\text{TRIM}(\text{name}_i))$.
+
+\subsection{Trích Xuất Phát Biểu Tri Thức (Claims/Covariates Extraction)}
+Ngoài thực thể và quan hệ, hệ thống hỗ trợ trích xuất các \textbf{Phát biểu Tri thức (Claims)} -- các mệnh đề thực tế được gắn trực tiếp vào thực thể nguồn. Mỗi phát biểu được phân loại theo hai chiều:
+\begin{itemize}
+    \item \textbf{Loại (Claim Type):} \texttt{FACTUAL}, \texttt{TEMPORAL}, \texttt{CAUSAL}, \texttt{QUANTITATIVE}, \texttt{STATUS\_CHANGE}.
+    \item \textbf{Trạng thái (Claim Status):} \texttt{STATED} (tường minh trong văn bản), \texttt{INFERRED} (suy luận gián tiếp), \texttt{DISPUTED} (bị phản bác).
+\end{itemize}
+Mỗi phát biểu được lưu trữ dưới dạng đỉnh \texttt{:Claim} trong Neo4j, liên kết đến thực thể chủ đề qua quan hệ \texttt{HAS\_CLAIM} và đến thực thể tham chiếu qua quan hệ \texttt{REFERENCES}. Hệ thống sử dụng hàm băm SHA-256 trên cặp $(subject\_id, claim\_description)$ để khử trùng lặp giữa các tài liệu.
+
+\subsection{Cơ Chế Gleaning (Trích Xuất Lặp Tinh Lọc)}
+Để tối đa hóa mức độ bao phủ tri thức, hệ thống áp dụng kỹ thuật \textbf{Gleaning} theo khuyến nghị của Microsoft GraphRAG \cite{edge2024graphrag}. Sau khi trích xuất ban đầu, LLM được yêu cầu đọc lại văn bản gốc kèm theo danh sách các thực thể và quan hệ đã trích xuất, nhằm phát hiện các tri thức bị bỏ sót:
+\begin{enumerate}
+    \item Xây dựng \textit{prompt} gleaning chứa danh sách thực thể/quan hệ đã trích xuất.
+    \item LLM trả về \textbf{chỉ các thực thể và quan hệ mới} chưa có trong danh sách hiện tại.
+    \item Hệ thống khử trùng lặp theo khóa $(id_{upper})$ cho thực thể và $(source, target, type)$ cho quan hệ.
+    \item Lặp lại tối đa $R$ vòng (\texttt{max\_gleaning\_rounds}), dừng sớm nếu vòng lặp không phát hiện tri thức mới.
+\end{enumerate}
 
 % =============================================================================
 \chapter{Kiến Trúc Hệ Thống và Thiết Kế Monorepo Modular}
@@ -329,7 +349,7 @@ Hệ thống \textbf{HLG LLM Utils} được tổ chức theo mô hình Monorepo
 \section{Phân Tích Chi Tiết Các Gói Core}
 \begin{itemize}
     \item \textbf{\texttt{llm-utils-core}:} Định nghĩa giao diện \texttt{TaskPlugin} và cơ chế nạp plugin động qua Python entry-points (\texttt{llm\_utils.plugins}).
-    \item \textbf{\texttt{llm-utils-graph-rag}:} Mô-đun trung tâm quản lý giao tiếp Neo4j (\texttt{Neo4jGraphStore}), dịch vụ trích xuất đồ thị, phân hoạch Leiden, truy vấn toàn cục Map-Reduce và thuật toán ARK.
+    \item \textbf{\texttt{llm-utils-graph-rag}:} Mô-đun trung tâm quản lý giao tiếp Neo4j (\texttt{Neo4jGraphStore}), dịch vụ trích xuất đồ thị (bao gồm trích xuất Claims và cơ chế Gleaning), tìm kiếm từ khóa BM25 trên đồ thị (\texttt{rank-bm25}), phân hoạch Leiden, truy vấn toàn cục Map-Reduce và thuật toán ARK.
     \item \textbf{\texttt{llm-utils-subagent}:} Khung tạo subagent phi trạng thái (\textbf{Stateless}), đảm bảo xây dựng lại đồ thị thực thi và bộ nhớ sạch sau mỗi lần gọi \texttt{run()} / \texttt{arun()}.
     \item \textbf{\texttt{llm-utils-mcp}:} Triển khai Model Context Protocol của Anthropic, cho phép xuất các công cụ Graph RAG thành MCP Server phục vụ cho ứng dụng bên ngoài.
 \end{itemize}
@@ -337,7 +357,7 @@ Hệ thống \textbf{HLG LLM Utils} được tổ chức theo mô hình Monorepo
 \section{Tích Hợp Backend (FastAPI) và Frontend (React)}
 Tầng Backend (\texttt{BE/app/}) đóng vai trò điều phối trung tâm:
 \begin{itemize}
-    \item \textbf{Service Registry (\texttt{services/registry.py}):} Sử dụng khóa luồng \texttt{threading.Lock} để khởi tạo các Lazy Singleton cho \texttt{GraphQueryService}, \texttt{CommunityDetectionService}, và \texttt{GlobalSearchService}.
+    \item \textbf{Service Registry (\texttt{services/registry.py}):} Sử dụng khóa luồng \texttt{threading.Lock} để khởi tạo các Lazy Singleton cho \texttt{GraphQueryService}, \texttt{CommunityDetectionService}, và \texttt{GlobalSearchService}. Khi khởi tạo, hệ thống tự động kết nối Neo4j Graph Store và thiết lập chỉ mục tìm kiếm toàn văn (\texttt{ensure\_fulltext\_index}) để hỗ trợ truy vấn từ khóa BM25 trực tiếp trên đồ thị.
     \item \textbf{WebSocket Streaming Router (\texttt{routers/chat\_router.py}):} Sử dụng sự kiện \texttt{astream\_events} của LangGraph để truyền phát (\textbf{Stream}) các phản hồi mã suy luận, suy nghĩ của LLM (\texttt{thinking\_delta}) và kết quả gọi công cụ về Frontend theo thời gian thực.
 \end{itemize}
 
@@ -421,7 +441,7 @@ Mô-đun \texttt{ark\_agent.py} triển khai $N$ tác thể ngẫu nhiên ($N = 
 \section{Tích Hợp Cơ Sở Dữ Liệu và Lưu Trữ Object}
 Hệ thống sử dụng ba cơ sở dữ liệu chuyên biệt hoạt động song song trong môi trường Docker:
 \begin{itemize}
-    \item \textbf{Neo4j (Graph Database):} Lưu trữ thực thể, mối quan hệ và cấu trúc cộng đồng. Khởi tạo chỉ mục vector trên nhãn \texttt{:Entity} và \texttt{:Community} với kích thước $d=1536$ hoặc $d=768$.
+    \item \textbf{Neo4j (Graph Database):} Lưu trữ thực thể, mối quan hệ, phát biểu tri thức (Claims) và cấu trúc cộng đồng. Khởi tạo chỉ mục vector trên nhãn \texttt{:Entity} và \texttt{:Community} với kích thước $d=1536$ hoặc $d=768$, đồng thời thiết lập chỉ mục tìm kiếm toàn văn (Fulltext Index) cho truy vấn BM25.
     \item \textbf{Qdrant / PGVector (Vector Database):} Lưu trữ vector nhúng của các đoạn văn bản (Chunks) phục vụ tìm kiếm ngữ nghĩa thô.
     \item \textbf{MinIO (S3 Object Storage):} Lưu trữ tệp gốc (PDF, Docx, Hình ảnh) với cơ chế đồng bộ trạng thái tài liệu vào PostgreSQL qua SQLAlchemy Async API.
 \end{itemize}

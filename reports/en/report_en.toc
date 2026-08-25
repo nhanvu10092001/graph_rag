@@ -9,19 +9,20 @@
 \contentsline {subsection}{\numberline {2.1.1}From Semantic Networks to Property Knowledge Graphs}{3}{subsection.2.1.1}%
 \contentsline {section}{\numberline {2.2}Vector Space Embeddings \& Hybrid Retrieval}{3}{section.2.2}%
 \contentsline {section}{\numberline {2.3}Community Detection \& The Leiden Algorithm}{3}{section.2.3}%
-\contentsline {section}{\numberline {2.4}Microsoft GraphRAG \& ARK Exploration}{4}{section.2.4}%
-\contentsline {chapter}{\numberline {3}Formal Knowledge Representation \& Schema Design}{5}{chapter.3}%
-\contentsline {section}{\numberline {3.1}Property Knowledge Graph Formalization}{5}{section.3.1}%
-\contentsline {section}{\numberline {3.2}Neo4j Graph Schema Specification}{5}{section.3.2}%
+\contentsline {section}{\numberline {2.4}Microsoft GraphRAG \& ARK Exploration}{3}{section.2.4}%
+\contentsline {chapter}{\numberline {3}Formal Knowledge Representation \& Schema Design}{4}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Property Knowledge Graph Formalization}{4}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Neo4j Graph Schema Specification}{4}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Triplet Extraction Taxonomy \& Claims/Gleaning Pipeline}{5}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Claims/Covariates Extraction}{5}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Gleaning (Iterative Extraction Refinement)}{5}{subsection.3.3.2}%
 \contentsline {chapter}{\numberline {4}System Architecture \& Monorepo Design}{6}{chapter.4}%
 \contentsline {section}{\numberline {4.1}UV Workspace Monorepo Architecture}{6}{section.4.1}%
 \contentsline {section}{\numberline {4.2}Backend Services \& FastAPI Integration}{6}{section.4.2}%
 \contentsline {chapter}{\numberline {5}Advanced Search \& Inference Algorithms}{7}{chapter.5}%
 \contentsline {section}{\numberline {5.1}Hierarchical Leiden Community Detection}{7}{section.5.1}%
 \contentsline {section}{\numberline {5.2}Cypher Self-Correction State Machine}{7}{section.5.2}%
-\contentsline {chapter}{\numberline {6}Experimental Evaluation \& Benchmark Results}{9}{chapter.6}%
-\contentsline {section}{\numberline {6.1}Experimental Setup \& RAGAS Benchmarks}{9}{section.6.1}%
-\contentsline {chapter}{\numberline {7}Conclusion \& Task Division}{11}{chapter.7}%
-\contentsline {section}{\numberline {7.1}Conclusion}{11}{section.7.1}%
-\contentsline {section}{\numberline {7.2}Student Contribution Matrix}{11}{section.7.2}%
-\contentsline {chapter}{References}{12}{table.7.1}%
+\contentsline {chapter}{\numberline {6}Conclusion \& Task Division}{9}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Conclusion}{9}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Student Contribution Matrix}{9}{section.6.2}%
+\contentsline {chapter}{References}{10}{table.6.1}%

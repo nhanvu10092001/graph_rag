@@ -153,7 +153,7 @@ Standard Retrieval-Augmented Generation (Naive RAG) systems based on flat chunki
 
 Our framework introduces key contributions in Knowledge Representation and Information Retrieval:
 \begin{enumerate}[leftmargin=*]
-    \item \textbf{Formal Property Knowledge Graph Modeling:} Automated extraction of entities ($\mathcal{E}$), relationships ($\mathcal{R}$), and attributes from unstructured text, persisting them onto a Neo4j Property Knowledge Graph.
+    \item \textbf{Formal Property Knowledge Graph Modeling:} Automated extraction of entities ($\mathcal{E}$), relationships ($\mathcal{R}$), and claims/covariates from unstructured text, persisting them onto a Neo4j Property Knowledge Graph. Supports \textbf{Gleaning} (iterative extraction refinement) to maximize knowledge coverage.
     \item \textbf{Hierarchical Leiden Community Detection:} Partitioning the entity graph into multi-level community hierarchies, combined with parallel Map-Reduce LLM summarization for Global Search queries.
     \item \textbf{Cypher Query Self-Correction State Machine:} A LangGraph state machine translating natural language queries into executable Cypher statements, featuring a 3-iteration error feedback loop against Neo4j execution logs.
     \item \textbf{ARK Autonomous Multi-Agent Exploration:} Implementing the ACL 2026 Adaptive Retriever of Knowledge algorithm to dynamically adjust breadth-depth graph traversal with Voting Rank Fusion (VRF).
@@ -198,7 +198,7 @@ To address these limitations, this project designs and implements \textbf{HLG LL
 
 Our primary contributions include:
 \begin{itemize}
-    \item Formalizing Property Knowledge Graph schemas $G = (V, E, \mathcal{L}_V, \mathcal{R}_E, \Phi_V, \Phi_E)$ in Neo4j.
+    \item Formalizing Property Knowledge Graph schemas $G = (V, E, \mathcal{L}_V, \mathcal{R}_E, \Phi_V, \Phi_E)$ in Neo4j, including entity, relationship, and claims/covariates extraction with iterative Gleaning refinement.
     \item Implementing Hierarchical Leiden Community Detection for corpus-wide Map-Reduce Global Search.
     \item Building a LangGraph Cypher Query Self-Correction State Machine with automatic error recovery.
     \item Integrating the ACL 2026 ARK (Adaptive Retriever of Knowledge) multi-agent trajectory exploration engine.
@@ -210,20 +210,20 @@ Our primary contributions include:
 % =============================================================================
 
 \section{Knowledge Representation Paradigms}
-Knowledge Representation (KR) investigates formalisms for encoding real-world domain knowledge into computational structures capable of reasoning \cite{ji2022survey}.
+Knowledge Representation (KR) investigates formalisms for encoding real-world domain knowledge into computational structures capable of reasoning.
 
 \subsection{From Semantic Networks to Property Knowledge Graphs}
-The evolution of KR spans Semantic Networks \cite{quillian1968semantic}, Minsky's Frame Systems \cite{minsky1974frame}, Description Logics \cite{baader2003description}, and Semantic Web standards (RDF/OWL). Property Knowledge Graphs (PKGs) have emerged as the industrial standard, allowing key-value properties to be attached directly to vertices and directed edges.
+The evolution of KR spans Semantic Networks, Minsky's Frame Systems, Description Logics, and Semantic Web standards (RDF/OWL). Property Knowledge Graphs (PKGs) have emerged as the industrial standard, allowing key-value properties to be attached directly to vertices and directed edges.
 
 \section{Vector Space Embeddings \& Hybrid Retrieval}
-Dense vector embeddings map text segments into continuous vector spaces $\mathbb{R}^d$ \cite{reimers2019sentencebert}. To maximize retrieval precision, our system employs Reciprocal Rank Fusion (RRF) \cite{cormack2009rrf} to combine lexical BM25 scores \cite{robertson2009bm25} with dense vector and graph scores:
+Dense vector embeddings map text segments into continuous vector spaces $\mathbb{R}^d$. To maximize retrieval precision, our system employs Reciprocal Rank Fusion (RRF) to combine lexical BM25 scores with dense vector and graph scores:
 \begin{equation}
 RRF(d \in D) = \sum_{m \in M} \frac{1}{k + r_m(d)}
 \end{equation}
 where $M$ denotes retrieval modalities, $r_m(d)$ is the document rank, and $k = 60$ is the smoothing constant.
 
 \section{Community Detection \& The Leiden Algorithm}
-Partitioning complex networks into cohesive modules enables macro-level context extraction. The Leiden algorithm \cite{traag2019leiden} guarantees well-connected communities by introducing a local sub-community refinement step missing in Louvain. The modularity quality function $\mathcal{H}$ is defined as:
+Partitioning complex networks into cohesive modules enables macro-level context extraction. The Leiden algorithm guarantees well-connected communities by introducing a local sub-community refinement step missing in Louvain. The modularity quality function $\mathcal{H}$ is defined as:
 \begin{equation}
 \mathcal{H} = \frac{1}{2m} \sum_{ij} \left( A_{ij} - \gamma \frac{k_i k_j}{2m} \right) \delta(\sigma_i, \sigma_j)
 \end{equation}
@@ -241,7 +241,7 @@ We formally model the Property Knowledge Graph $\mathcal{G}$ as a 6-tuple:
 \begin{equation}
 \mathcal{G} = \left( V, E, \mathcal{L}_V, \mathcal{R}_E, \Phi_V, \Phi_E \right)
 \end{equation}
-where $V$ is the set of entity vertices, $E \subseteq V \times \mathcal{R}_E \times V$ is the set of directed typed edges, $\mathcal{L}_V$ represents node labels, $\mathcal{R}_E$ contains relationship types, and $\Phi_V, \Phi_E$ map property key-value attributes onto vertices and edges.
+where $V$ is the set of entity vertices, $E \subseteq V \times \mathcal{R}_E \times V$ is the set of directed typed edges, $\mathcal{L}_V = \{\text{Document}, \text{Chunk}, \text{Entity}, \text{Community}, \text{Claim}\}$ represents node labels, $\mathcal{R}_E = \{\text{HAS\_CHUNK}, \text{MENTIONS}, \text{RELATED\_TO}, \text{BELONGS\_TO}, \text{PARENT\_OF}, \text{HAS\_CLAIM}, \text{REFERENCES}\}$ contains relationship types, and $\Phi_V, \Phi_E$ map property key-value attributes onto vertices and edges.
 
 \section{Neo4j Graph Schema Specification}
 
@@ -257,7 +257,8 @@ where $V$ is the set of entity vertices, $E \subseteq V \times \mathcal{R}_E \ti
 \texttt{:Document} & \texttt{id, filename, status} & Source document identifier, file name, ingestion status (\texttt{String}). \\[0.2cm]
 \texttt{:Chunk} & \texttt{id, text, index, embedding} & Text segment, raw content, sequence index, vector embedding $\mathbb{R}^d$. \\[0.2cm]
 \texttt{:Entity} & \texttt{id, type, description, embedding} & Uppercase entity ID, category type, summary description, vector embedding $\mathbb{R}^d$. \\[0.2cm]
-\texttt{:Community} & \texttt{id, level, title, summary, findings} & Synthetic community ID, hierarchy level $l$, title, LLM summary, JSON findings. \\
+\texttt{:Community} & \texttt{id, level, title, summary, findings} & Synthetic community ID, hierarchy level $l$, title, LLM summary, JSON findings. \\[0.2cm]
+\texttt{:Claim} & \texttt{id, subject\_id, claim\_type, claim\_status, description} & Knowledge claim (Covariate): type (FACTUAL, TEMPORAL, CAUSAL, QUANTITATIVE, STATUS\_CHANGE), status (STATED, INFERRED, DISPUTED), text, date (\texttt{String}). \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -268,8 +269,34 @@ The graph edges enforce structural integrity:
 (c:\text{Chunk}) &\xrightarrow{\text{MENTIONS}} (e:\text{Entity}) \\
 (e_1:\text{Entity}) &\xrightarrow{\text{RELATED\_TO} \{\text{description, weight}\}} (e_2:\text{Entity}) \\
 (e:\text{Entity}) &\xrightarrow{\text{BELONGS\_TO} \{\text{level}\}} (c:\text{Community}) \\
-(c_1:\text{Community}) &\xrightarrow{\text{PARENT\_OF}} (c_2:\text{Community})
+(c_1:\text{Community}) &\xrightarrow{\text{PARENT\_OF}} (c_2:\text{Community}) \\
+(e:\text{Entity}) &\xrightarrow{\text{HAS\_CLAIM}} (cl:\text{Claim}) \\
+(cl:\text{Claim}) &\xrightarrow{\text{REFERENCES}} (e:\text{Entity})
 \end{align}
+
+\section{Triplet Extraction Taxonomy \& Claims/Gleaning Pipeline}
+The system formalizes knowledge extraction from unstructured text via LLM structured output (Pydantic schemas):
+\begin{equation}
+T_{extract}(C_k) \to \left( \{e_i = (\text{name}_i, \text{type}_i, \text{desc}_i)\}, \{r_{ij} = (e_i, \text{rel\_type}, e_j, \text{desc}_{ij}, w_{ij})\}\right)
+\end{equation}
+All entity names are uppercased and trimmed: $e_{\text{upper}} = \text{UPPER}(\text{TRIM}(\text{name}_i))$.
+
+\subsection{Claims/Covariates Extraction}
+Beyond entities and relationships, the system extracts \textbf{Claims} -- factual assertions anchored to source entities. Each claim is classified along two dimensions:
+\begin{itemize}
+    \item \textbf{Claim Type:} \texttt{FACTUAL}, \texttt{TEMPORAL}, \texttt{CAUSAL}, \texttt{QUANTITATIVE}, \texttt{STATUS\_CHANGE}.
+    \item \textbf{Claim Status:} \texttt{STATED} (explicit in text), \texttt{INFERRED} (implied), \texttt{DISPUTED} (contradicted).
+\end{itemize}
+Claims are persisted as \texttt{:Claim} nodes in Neo4j, linked to their subject entity via \texttt{HAS\_CLAIM} and to referenced entities via \texttt{REFERENCES}. SHA-256 hashing on $(subject\_id, claim\_description)$ ensures cross-document deduplication.
+
+\subsection{Gleaning (Iterative Extraction Refinement)}
+To maximize knowledge coverage, the system implements \textbf{Gleaning} as recommended by Microsoft GraphRAG \cite{edge2024graphrag}. After initial extraction, the LLM is prompted to re-read the source text alongside the already-extracted entities and relationships, identifying any missed knowledge:
+\begin{enumerate}
+    \item Construct a gleaning prompt containing the list of previously extracted entities and relationships.
+    \item The LLM returns \textbf{only new} entities and relationships not already present.
+    \item The system deduplicates by key $(id_{upper})$ for entities and $(source, target, type)$ for relationships.
+    \item Repeat for up to $R$ rounds (\texttt{max\_gleaning\_rounds}), with early stopping when no new knowledge is found.
+\end{enumerate}
 
 % =============================================================================
 \chapter{System Architecture \& Monorepo Design}
@@ -306,7 +333,7 @@ The \textbf{HLG LLM Utils} codebase is organized as a unified \texttt{uv} worksp
 \end{figure}
 
 \section{Backend Services \& FastAPI Integration}
-The Backend (\texttt{BE/app/}) implements a thread-safe Lazy Singleton registry (\texttt{services/registry.py}) providing instances for \texttt{GraphQueryService}, \texttt{CommunityDetectionService}, and \texttt{GlobalSearchService}. WebSocket streaming endpoints (\texttt{/ws/chat}) leverage LangGraph \texttt{astream\_events} to deliver real-time token and tool execution streams.
+The Backend (\texttt{BE/app/}) implements a thread-safe Lazy Singleton registry (\texttt{services/registry.py}) providing instances for \texttt{GraphQueryService}, \texttt{CommunityDetectionService}, and \texttt{GlobalSearchService}. During initialization, the registry explicitly connects the Neo4j Graph Store and establishes a fulltext search index (\texttt{ensure\_fulltext\_index}) to support BM25 keyword queries directly on the knowledge graph. WebSocket streaming endpoints (\texttt{/ws/chat}) leverage LangGraph \texttt{astream\_events} to deliver real-time token and tool execution streams.
 
 % =============================================================================
 \chapter{Advanced Search \& Inference Algorithms}

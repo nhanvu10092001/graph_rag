@@ -214,6 +214,10 @@ class Settings:
                 },
             ),
             "extraction": extraction_cfg,
+            "graph_extraction": self.raw.get(
+                "graph_extraction",
+                {"max_gleaning_rounds": 0, "extract_claims": False},
+            ),
             "subagents": self.raw.get("subagents", {"enabled": True, "agents": []}),
             "ark": self.raw.get("ark", {}),
             "chunking": self.raw.get("chunking", {}),

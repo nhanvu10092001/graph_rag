@@ -64,6 +64,8 @@ def _initialize_services() -> ServiceBundle:
 
     logger.info("Initializing Graph RAG Plugin...")
     graph_rag_plugin = GraphRAGPlugin(plugin_config)
+    graph_rag_plugin.graph_store.connect()
+    graph_rag_plugin.graph_store.ensure_fulltext_index()
 
     embeddings = EmbeddingsFactory.create_embeddings(plugin_config["embeddings"])
 

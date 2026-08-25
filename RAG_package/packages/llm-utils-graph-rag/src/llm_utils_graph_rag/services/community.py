@@ -29,12 +29,19 @@ Given the following entities and their relationships within this community, prod
 2. "summary": A comprehensive paragraph summarizing the key themes, facts, and connections within this community.
 3. "findings": A list of 3-5 key findings or insights about this community, each as a short sentence.
 4. "importance_score": A float from 0.0 to 1.0 indicating how informative or significant this community is.
+5. Include data references in your summary and findings using the format: [Data: Entities (id1, id2); Relationships (R1, R2)].
+   - Reference the specific entity IDs and relationship IDs provided in the input.
+   - Include no more than 5 record IDs per reference type. Add "+more" if there are more.
+   - Every insight in findings should be grounded with at least one data reference.
 
 Entities:
 {entities}
 
 Relationships:
 {relationships}
+
+Claims:
+{claims}
 
 Respond with raw JSON only, no markdown formatting or explanations.
 """
@@ -408,17 +415,40 @@ class CommunityDetectionService:
         RETURN e1.id AS source, type(r) AS rel, e2.id AS target, r.description AS description
         """, {"comm_id": community_id})
 
-        # Format for prompt
+        # Format for prompt with grounding reference IDs
         entities_text = "\n".join(
-            f"- {e['id']} ({e['type']}): {e['description']}" for e in entities_result
+            f"- [Entity: {e['id']}] {e['id']} ({e['type']}): {e['description']}" for e in entities_result
         )
+
+        rels_with_ids = []
+        for idx, r in enumerate(rels_result or []):
+            rels_with_ids.append({**r, "ref_id": f"R{idx+1}"})
+
         rels_text = "\n".join(
-            f"- {r['source']} -[{r['rel']}]-> {r['target']}: {r.get('description', '')}"
-            for r in rels_result
-        ) if rels_result else "No internal relationships."
+            f"- [Rel: {r['ref_id']}] {r['source']} -[{r['rel']}]-> {r['target']}: {r.get('description', '')}"
+            for r in rels_with_ids
+        ) if rels_with_ids else "No internal relationships."
+
+        # Gather claims for community members
+        claims_result = []
+        try:
+            claims_result = self.graph_store.query(f"""
+            MATCH (e:Entity)-[:HAS_CLAIM]->(cl:Claim)
+            WHERE e.`{prop_name}` = $comm_id
+            RETURN cl.id AS id, cl.subject_id AS subject, cl.description AS description,
+                   cl.claim_type AS claim_type, cl.claim_status AS status
+            LIMIT 30
+            """, {"comm_id": community_id})
+        except Exception:
+            pass
+
+        claims_text = "\n".join(
+            f"- [Claim: {c['id']}] ({c.get('claim_type', 'FACTUAL')}) {c['subject']}: {c['description']} [{c.get('status', 'STATED')}]"
+            for c in claims_result
+        ) if claims_result else "No claims available."
 
         # Generate summary with LLM using Structured Output
-        prompt = COMMUNITY_SUMMARY_PROMPT.format(entities=entities_text, relationships=rels_text)
+        prompt = COMMUNITY_SUMMARY_PROMPT.format(entities=entities_text, relationships=rels_text, claims=claims_text)
         report_dict = None
         if hasattr(self.llm, "with_structured_output"):
             try:

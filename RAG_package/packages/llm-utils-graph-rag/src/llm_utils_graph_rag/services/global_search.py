@@ -5,12 +5,18 @@ import logging
 import re
 from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, Field
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
 from ..graph_store import Neo4jGraphStore
 from .community import CommunityDetectionService
 
 logger = logging.getLogger(__name__)
+
+
+class MapAnswerResult(BaseModel):
+    answer: str = Field(description="Partial answer based on this community's information. Write 'NO_RELEVANT_INFO' if irrelevant.")
+    helpful_score: int = Field(default=0, description="Integer 0-100 indicating how helpful this answer is. 0 = irrelevant, 100 = highly relevant.")
 
 # ── Prompts ──────────────────────────────────────────────────────────────────
 
@@ -38,7 +44,18 @@ Member Entities:
 Key Relationships:
 {relationships}
 
+Claims:
+{claims}
+
 Generate a concise, factual partial answer based only on this community's information. If this community has no relevant information, respond with "NO_RELEVANT_INFO".
+- Preserve any data references from the community summary in the format [Data: Entities (...); Relationships (...)].
+- When citing specific entities or relationships, use the [Data: ...] reference format.
+
+Additionally, rate how helpful your partial answer is for the query on a scale of 0 to 100:
+- 0: This community has no relevant information at all.
+- 1-30: Marginally relevant, only tangentially related.
+- 31-70: Moderately relevant, addresses part of the question.
+- 71-100: Highly relevant, directly addresses the question with specific information.
 """
 
 REDUCE_PROMPT = """You are a synthesis assistant. Multiple partial answers have been generated from different communities (groups of related entities) in a knowledge graph. Combine them into one coherent, comprehensive final answer.
@@ -54,6 +71,8 @@ Instructions:
 - If there are contradictions, note them.
 - If all partial answers indicate no relevant info, say so clearly.
 - Structure the answer clearly with key points.
+- Preserve data references like [Data: Entities (...); Relationships (...)] from partial answers.
+- Consolidate references when merging information from multiple partial answers.
 """
 
 
@@ -131,19 +150,26 @@ class GlobalSearchService:
 
         logger.info(f"Selected {len(selected_communities)} relevant communities for map phase.")
 
-        # 2. Map Phase — generate partial answers from each community
-        partial_answers = []
+        # 2. Map Phase — generate scored partial answers from each community
+        raw_map_results = []
         for community in selected_communities:
             try:
-                partial = self._map_community(query, community)
-                if partial and "NO_RELEVANT_INFO" not in partial:
-                    partial_answers.append({
+                map_result = self._map_community(query, community)
+                answer_text = map_result.get("answer", "")
+                score = map_result.get("helpful_score", 0)
+                if answer_text and "NO_RELEVANT_INFO" not in answer_text and score > 0:
+                    raw_map_results.append({
                         "community_id": community.get("id", "unknown"),
                         "community_title": community.get("title", "Unknown"),
-                        "answer": partial,
+                        "answer": answer_text,
+                        "helpful_score": score,
                     })
             except Exception as e:
                 logger.error(f"Map phase failed for community {community.get('id')}: {e}")
+
+        # Sort by helpful_score descending (paper: higher scores first for reduce)
+        raw_map_results.sort(key=lambda x: x["helpful_score"], reverse=True)
+        partial_answers = raw_map_results
 
         if not partial_answers:
             return {
@@ -214,16 +240,6 @@ class GlobalSearchService:
 
         return relevant
 
-        # Stage 2: LLM relevance filtering
-        relevant = []
-        for candidate in candidates[:max_communities * 2]:
-            if self._is_community_relevant(query, candidate):
-                relevant.append(candidate)
-                if len(relevant) >= max_communities:
-                    break
-
-        return relevant
-
     def _is_community_relevant(self, query: str, community: Dict[str, Any]) -> bool:
         """Use LLM to determine if a community is relevant to the query."""
         title = community.get("title", "")
@@ -247,8 +263,8 @@ class GlobalSearchService:
 
     # ── Map Phase ────────────────────────────────────────────────────────
 
-    def _map_community(self, query: str, community: Dict[str, Any]) -> str:
-        """Generate a partial answer from a single community's context."""
+    def _map_community(self, query: str, community: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate a scored partial answer from a single community's context."""
         comm_id = community.get("id", "")
         title = community.get("title", "")
         summary = community.get("summary", "")
@@ -274,7 +290,7 @@ class GlobalSearchService:
         """, {"comm_id": comm_id})
 
         entities_text = "\n".join(
-            f"- {e['id']} ({e['type']}): {e['description']}" for e in entities_result
+            f"- [Entity: {e['id']}] {e['id']} ({e['type']}): {e['description']}" for e in entities_result
         ) if entities_result else "No entities available."
 
         # Fetch internal relationships
@@ -287,10 +303,31 @@ class GlobalSearchService:
         LIMIT 30
         """, {"comm_id": comm_id})
 
-        rels_text = "\n".join(
-            f"- {r['source']} -[{r['rel']}]-> {r['target']}: {r.get('description', '')}"
-            for r in rels_result
-        ) if rels_result else "No internal relationships."
+        rels_text_parts = []
+        for idx, r in enumerate(rels_result or []):
+            ref_id = f"R{idx+1}"
+            rels_text_parts.append(
+                f"- [Rel: {ref_id}] {r['source']} -[{r['rel']}]-> {r['target']}: {r.get('description', '')}"
+            )
+        rels_text = "\n".join(rels_text_parts) if rels_text_parts else "No internal relationships."
+
+        # Fetch claims for community members
+        claims_result = []
+        try:
+            claims_result = self.graph_store.query("""
+            MATCH (e:Entity)-[:BELONGS_TO]->(c:Community {id: $comm_id})
+            MATCH (e)-[:HAS_CLAIM]->(cl:Claim)
+            RETURN cl.id AS id, cl.subject_id AS subject, cl.description AS description,
+                   cl.claim_type AS claim_type, cl.claim_status AS status
+            LIMIT 20
+            """, {"comm_id": comm_id})
+        except Exception:
+            pass
+
+        claims_text = "\n".join(
+            f"- [Claim: {c['id']}] ({c.get('claim_type', 'FACTUAL')}) {c['subject']}: {c['description']} [{c.get('status', 'STATED')}]"
+            for c in claims_result
+        ) if claims_result else "No claims available."
 
         prompt = MAP_PROMPT.format(
             query=query,
@@ -299,12 +336,25 @@ class GlobalSearchService:
             findings=findings_text,
             entities=entities_text,
             relationships=rels_text,
+            claims=claims_text,
         )
 
+        # Try structured output for answer + helpful score
+        try:
+            structured_llm = self.llm.with_structured_output(MapAnswerResult)
+            map_result = structured_llm.invoke(prompt)
+            if isinstance(map_result, MapAnswerResult):
+                return {"answer": map_result.answer, "helpful_score": map_result.helpful_score}
+            elif isinstance(map_result, dict):
+                return {"answer": map_result.get("answer", ""), "helpful_score": map_result.get("helpful_score", 50)}
+        except Exception as e:
+            logger.warning(f"Structured map output failed ({e}), falling back to text.")
+
+        # Fallback: plain text with default score 50
         response = self.llm.invoke(prompt)
         result = _get_content_str(response)
         result = re.sub(r"<think>.*?</think>", "", result, flags=re.DOTALL).strip()
-        return result
+        return {"answer": result, "helpful_score": 50}
 
     # ── Reduce Phase ─────────────────────────────────────────────────────
 

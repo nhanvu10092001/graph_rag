@@ -1,7 +1,7 @@
 \documentclass[11pt]{article}
 
 % Change "review" to "final" to generate the final (sometimes called camera-ready) version.
-\usepackage[review]{acl}
+\usepackage[final]{acl}
 
 % Standard package includes
 \usepackage{times}
@@ -173,11 +173,10 @@ The entity graph is partitioned across $L_{\max}$ levels using the Leiden algori
 
 The system supports dual backends: (1) Neo4j GDS for in-database processing, and (2) Python \texttt{igraph} + \texttt{leidenalg} as fallback. For each detected community $c$, the system generates an LLM summary report:
 
-\vspace{-0.5em}
-\begin{algorithm}[h]
+\begin{algorithm}[t]
 \caption{Hierarchical Leiden Detection \& Summarization}
 \label{alg:leiden}
-\small
+\footnotesize
 \begin{algorithmic}[1]
 \REQUIRE Entity Graph $G$, base resolution $\gamma_0$, max levels $L_{\max}$
 \ENSURE Hierarchical Community Tree with LLM summaries
@@ -186,14 +185,14 @@ The system supports dual backends: (1) Neo4j GDS for in-database processing, and
     \STATE $P_l \leftarrow \texttt{LeidenPartition}(G, \gamma_l)$
     \FORALL{community $c \in P_l$}
         \STATE Extract entities, relationships, claims for $c$
-        \STATE $\texttt{report} \leftarrow \texttt{LLM\_Summarize}(c)$ \COMMENT{title, summary, findings, importance\_score}
+        \STATE $\texttt{report} \leftarrow \texttt{LLM\_Summarize}(c)$
+        \STATE \COMMENT{Returns: title, summary, findings, importance\_score}
         \STATE $\mathbf{v}_c \leftarrow \texttt{embed}(\texttt{report.summary})$
-        \STATE Persist $c$ to Neo4j with level $l$ and embedding $\mathbf{v}_c$
+        \STATE Persist $c$ to Neo4j with level $l$, embedding $\mathbf{v}_c$
     \ENDFOR
 \ENDFOR
 \end{algorithmic}
 \end{algorithm}
-\vspace{-0.5em}
 
 Community summaries use a structured schema including title, narrative summary, key findings, and an importance score $\in [0, 1]$.
 

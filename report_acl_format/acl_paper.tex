@@ -1,0 +1,487 @@
+\documentclass[11pt]{article}
+
+% Change "review" to "final" to generate the final (sometimes called camera-ready) version.
+\usepackage[review]{acl}
+
+% Standard package includes
+\usepackage{times}
+\usepackage{latexsym}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{inconsolata}
+
+% Additional packages
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,amsfonts,mathtools}
+\usepackage{tikz}
+\usetikzlibrary{positioning,shapes.geometric,arrows.meta}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+% Color Definitions
+\definecolor{navyblue}{RGB}{0,32,96}
+\definecolor{darkgreen}{RGB}{0,100,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{backcolour}{rgb}{0.96,0.96,0.96}
+
+% Code Listing Configuration
+\lstdefinestyle{codeStyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{darkgreen},
+    keywordstyle=\color{navyblue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{red!70!black},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showstringspaces=false,
+    tabsize=2
+}
+\lstset{style=codeStyle}
+
+\setlength\titlebox{7.5cm}
+
+\title{HLG LLM Utils: An Advanced Graph RAG Framework with\\Multi-Agent Orchestration, Hierarchical Leiden Community Detection,\\and Cypher Query Self-Correction}
+
+\author{Nguyen Hoai Nam \\
+  VNUHCM -- University of Science \\
+  Faculty of Data Science \\
+  Student ID: 25C01014 \\
+  \And
+  Pham Cung Le Nhan Vu \\
+  VNUHCM -- University of Science \\
+  Faculty of Data Science \\
+  Student ID: 25C01049 \\}
+
+\begin{document}
+\maketitle
+
+% =============================================================================
+% ABSTRACT
+% =============================================================================
+\begin{abstract}
+Standard Retrieval-Augmented Generation (RAG) systems based on flat chunking and vector similarity suffer from global context fragmentation and multi-hop reasoning failures. We present \textbf{HLG LLM Utils}, a modular Graph RAG framework built on a Python \texttt{uv}-workspace monorepo comprising 10 packages. Our system constructs a Neo4j Property Knowledge Graph through LLM-driven entity, relationship, and claims extraction with iterative Gleaning refinement. We implement four complementary retrieval strategies: (1) \textbf{Local Search} combining vector similarity with 1-hop graph traversal and cross-encoder reranking; (2) \textbf{Global Search} using Hierarchical Leiden community detection with parallel Map-Reduce LLM summarization; (3) a \textbf{Cypher Self-Correction State Machine} that translates natural language to executable Cypher with a 3-iteration error feedback loop; and (4) \textbf{ARK} (Adaptive Retriever of Knowledge), a multi-agent parallel stochastic graph explorer with Voting Rank Fusion (VRF). The system is deployed as a full-stack application with a FastAPI backend, React 19 frontend, self-hosted \texttt{nomic-embed-text-v1.5} embeddings via vLLM, and PaddleOCR-VL for document parsing, orchestrated via Docker Compose.
+\end{abstract}
+
+% =============================================================================
+% 1. INTRODUCTION
+% =============================================================================
+\section{Introduction}
+
+Large Language Models (LLMs) have achieved remarkable proficiency in natural language understanding and generation. However, standalone LLMs remain susceptible to hallucinations and knowledge cutoff constraints because their parametric knowledge is static \citep{lewis2020rag}. Retrieval-Augmented Generation (RAG) addresses this by grounding LLM responses in external data sources, but Naive RAG---relying on sliding-window chunking and cosine similarity---exhibits fundamental limitations.
+
+We identify three critical failure modes:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Structural Context Fragmentation:} Fixed-size chunking severs conceptual relationships spanning across paragraphs or documents.
+    \item \textbf{Multi-Hop Reasoning Blindspots:} Vector similarity retrieves chunks mentioning query terms but misses crucial intermediate relational links in chains $A \to B \to C$.
+    \item \textbf{Corpus-Wide Summarization Failures:} Embedding similarity cannot answer high-level thematic queries that require synthesis across the entire corpus.
+\end{enumerate}
+
+To address these limitations, we design and implement \textbf{HLG LLM Utils}, a production-grade Graph RAG framework combining Property Knowledge Graphs with multi-agent coordination and hierarchical community detection. Our contributions include:
+
+\begin{itemize}[leftmargin=*]
+    \item A \textbf{Property Knowledge Graph} schema persisted in Neo4j with automated entity, relationship, and claims extraction via LLM structured output, including iterative Gleaning refinement.
+    \item \textbf{Hierarchical Leiden Community Detection} with multi-level resolution scaling and LLM-generated community summaries enabling Map-Reduce Global Search.
+    \item A \textbf{LangGraph Cypher Self-Correction State Machine} with automatic 3-iteration error recovery against Neo4j execution logs.
+    \item Integration of the \textbf{ARK} algorithm \citep{polonuer2026ark} for autonomous multi-agent graph exploration with Voting Rank Fusion.
+    \item A \textbf{modular monorepo architecture} (10 \texttt{uv} workspace packages) with full-stack deployment via Docker Compose.
+\end{itemize}
+
+% =============================================================================
+% 2. RELATED WORK
+% =============================================================================
+\section{Related Work}
+
+\paragraph{Knowledge Graphs and Representation.}
+Knowledge Representation has evolved from semantic networks \citep{quillian1968semantic} and frame systems \citep{minsky1974frame} through Description Logics \citep{baader2003description} to modern Property Knowledge Graphs \citep{robinson2015graph}. \citet{ji2022survey} survey KG construction and application, while \citet{pan2024unifying} provide a roadmap for unifying LLMs with Knowledge Graphs, establishing the foundation for our LLM-driven extraction pipeline.
+
+\paragraph{Retrieval-Augmented Generation.}
+\citet{lewis2020rag} introduced RAG for knowledge-intensive NLP tasks, combining dense retrieval with sequence-to-sequence generation. Subsequent work has explored hybrid retrieval combining sparse BM25 \citep{robertson2009bm25} with dense vectors through Reciprocal Rank Fusion \citep{cormack2009rrf}. Our system implements this hybrid approach with configurable sparse-dense weighting.
+
+\paragraph{Graph RAG and Community Detection.}
+\citet{edge2024graphrag} demonstrated that hierarchical community summarization enables effective global queries over large corpora. The Leiden algorithm \citep{traag2019leiden} guarantees well-connected communities through local sub-community refinement, addressing known issues with the Louvain method. Our system implements multi-level Leiden detection with dual backends (Neo4j GDS and Python \texttt{igraph+leidenalg}).
+
+\paragraph{Adaptive Knowledge Graph Retrieval.}
+\citet{polonuer2026ark} proposed ARK, an agentic framework providing LLMs with two complementary tools---global lexical search for breadth-oriented discovery and neighborhood exploration for depth-oriented multi-hop traversal---enabling the model to autonomously navigate knowledge graphs. Our implementation extends ARK with parallel stochastic trajectories and Voting Rank Fusion.
+
+\paragraph{Self-Refinement and Error Correction.}
+\citet{madaan2023selfrefine} established the paradigm of iterative self-refinement with self-feedback for LLM outputs. We apply this principle to both knowledge extraction (Gleaning) and Cypher query generation (self-correction state machine).
+
+% =============================================================================
+% 3. DATASET
+% =============================================================================
+\section{Dataset}
+
+HLG LLM Utils is designed as a domain-agnostic framework that constructs its knowledge graph dynamically from user-uploaded documents. The system accepts multiple input formats:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Document Types:} PDF, TXT, Markdown, DOCX (max 50MB per file).
+    \item \textbf{Parsing Pipeline:} Multi-format text extraction via PyMuPDF with OCR fallback chain: PaddleOCR-VL-1.5 (primary, served via vLLM on port 8083) $\to$ Tesseract $\to$ Docling.
+    \item \textbf{Storage:} Raw files are stored in MinIO S3-compatible object storage; metadata (filename, status, entity/relationship counts) is tracked in PostgreSQL.
+\end{itemize}
+
+Upon ingestion, documents are chunked using configurable strategies (standard recursive splitting at 1,000 tokens with 200-token overlap by default) and processed through the entity extraction pipeline. The resulting knowledge graph is persisted in Neo4j 5.18 with APOC plugin support. Embeddings are generated using self-hosted \texttt{nomic-ai/nomic-embed-text-v1.5} served via vLLM.
+
+% =============================================================================
+% 4. METHOD
+% =============================================================================
+\section{Method}
+
+\subsection{Property Knowledge Graph Construction}
+
+We model the Property Knowledge Graph as $\mathcal{G} = (V, E, \mathcal{L}_V, \mathcal{R}_E, \Phi_V, \Phi_E)$, where $V$ is the set of entity vertices, $E \subseteq V \times \mathcal{R}_E \times V$ is the set of directed typed edges, $\mathcal{L}_V = \{\texttt{Document}, \texttt{Chunk}, \texttt{Entity}, \texttt{Community}, \texttt{Claim}\}$ are node labels, $\mathcal{R}_E = \{\texttt{HAS\_CHUNK}, \texttt{MENTIONS}, \texttt{RELATED\_TO}, \texttt{BELONGS\_TO}, \texttt{PARENT\_OF}, \texttt{HAS\_CLAIM}, \texttt{REFERENCES}\}$ are relationship types, and $\Phi_V, \Phi_E$ map property attributes onto vertices and edges respectively.
+
+\subsubsection{Entity and Relationship Extraction}
+
+For each text chunk $C_k$, the system invokes the LLM with structured output via Pydantic schemas:
+
+\begin{equation}
+T_{\text{extract}}(C_k) \to \left(\{e_i\}_{i=1}^{N_e}, \{r_{ij}\}_{j=1}^{N_r}\right)
+\end{equation}
+
+where each entity $e_i = (\texttt{id}_i, \texttt{type}_i, \texttt{desc}_i)$ and each relationship $r_{ij} = (e_i, \texttt{rel\_type}, e_j, \texttt{desc}_{ij})$. Entity IDs are normalized via $\texttt{id}_{\text{upper}} = \texttt{UPPER}(\texttt{TRIM}(\texttt{id}_i))$, and relationship types are sanitized using regex: $\texttt{re.sub}(r\texttt{"[\char`\^A\text{-}Z0\text{-}9\_]"}, \texttt{""}, \texttt{rel\_type})$. Dense embeddings are generated for each entity as $\mathbf{v}_i = \texttt{embed}(\texttt{id}_i \| \texttt{type}_i \| \texttt{desc}_i) \in \mathbb{R}^d$.
+
+\subsubsection{Claims Extraction}
+
+Beyond entities and relationships, the system extracts \textbf{Claims}---factual assertions anchored to source entities. Each claim is classified by type (\texttt{FACTUAL}, \texttt{TEMPORAL}, \texttt{CAUSAL}, \texttt{QUANTITATIVE}, \texttt{STATUS\_CHANGE}) and status (\texttt{STATED}, \texttt{INFERRED}, \texttt{DISPUTED}). Claims are persisted as \texttt{:Claim} nodes linked via \texttt{HAS\_CLAIM} and \texttt{REFERENCES} edges. Cross-document deduplication uses SHA-256 hashing:
+\begin{equation}
+\texttt{claim\_id} = \texttt{CLM\_} \| \texttt{SHA256}(\texttt{subject\_id} \| \texttt{desc})_{[:16]}
+\end{equation}
+
+\subsubsection{Gleaning (Iterative Refinement)}
+
+Following \citet{edge2024graphrag}, we implement Gleaning to maximize extraction coverage. After initial extraction, the LLM is re-prompted with the source text and already-extracted knowledge to identify missed entities and relationships. The system deduplicates by entity ID (uppercase) and relationship triplet $(\texttt{source}, \texttt{target}, \texttt{type})$, repeating for up to $R$ rounds (\texttt{max\_gleaning\_rounds}) with early stopping when no new knowledge is discovered.
+
+\subsection{Hierarchical Leiden Community Detection}
+
+The entity graph is partitioned across $L_{\max}$ levels using the Leiden algorithm \citep{traag2019leiden}. Resolution decreases exponentially:
+\begin{equation}
+\gamma_l = \gamma_0 \times 0.5^l, \quad l \in [0, L_{\max}-1]
+\end{equation}
+
+The system supports dual backends: (1) Neo4j GDS for in-database processing, and (2) Python \texttt{igraph} + \texttt{leidenalg} as fallback. For each detected community $c$, the system generates an LLM summary report:
+
+\vspace{-0.5em}
+\begin{algorithm}[h]
+\caption{Hierarchical Leiden Detection \& Summarization}
+\label{alg:leiden}
+\small
+\begin{algorithmic}[1]
+\REQUIRE Entity Graph $G$, base resolution $\gamma_0$, max levels $L_{\max}$
+\ENSURE Hierarchical Community Tree with LLM summaries
+\FOR{$l = 0$ \textbf{to} $L_{\max}-1$}
+    \STATE $\gamma_l \leftarrow \gamma_0 \times 0.5^l$
+    \STATE $P_l \leftarrow \texttt{LeidenPartition}(G, \gamma_l)$
+    \FORALL{community $c \in P_l$}
+        \STATE Extract entities, relationships, claims for $c$
+        \STATE $\texttt{report} \leftarrow \texttt{LLM\_Summarize}(c)$ \COMMENT{title, summary, findings, importance\_score}
+        \STATE $\mathbf{v}_c \leftarrow \texttt{embed}(\texttt{report.summary})$
+        \STATE Persist $c$ to Neo4j with level $l$ and embedding $\mathbf{v}_c$
+    \ENDFOR
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+\vspace{-0.5em}
+
+Community summaries use a structured schema including title, narrative summary, key findings, and an importance score $\in [0, 1]$.
+
+\subsection{Retrieval Strategies}
+
+\subsubsection{Local Search}
+
+Local Search combines vector similarity with graph traversal:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Vector Retrieval:} Query embedding is matched against the \texttt{entity\_embeddings} vector index, retrieving $3 \times k$ candidates when reranking is enabled.
+    \item \textbf{Reranking:} Candidates are scored via CrossEncoder (\texttt{BAAI/bge-reranker-large}) or FlashRank, retaining top-$k$.
+    \item \textbf{1-Hop Graph Traversal:} For each top entity, adjacent nodes and edges are fetched via $\texttt{MATCH}\ (n:\texttt{Entity})-[r]-(m:\texttt{Entity})$.
+    \item \textbf{Community Enrichment:} Relevant community summaries (top-3 by importance score) are appended for macro-level context.
+\end{enumerate}
+
+\subsubsection{Global Search (Map-Reduce)}
+
+Global Search operates over community summaries at a specified hierarchy level:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Community Selection:} Vector search on community summary embeddings, filtered by LLM binary relevance evaluation.
+    \item \textbf{Map Phase:} Each relevant community is independently scored against the query, producing a partial answer with a helpfulness score $\in [0, 100]$. Communities scoring 0 or returning no relevant information are filtered.
+    \item \textbf{Reduce Phase:} Partial answers are ranked by helpfulness and synthesized into a unified response with grounded citations.
+\end{enumerate}
+
+\subsubsection{Cypher Self-Correction State Machine}
+
+A LangGraph state machine translates natural language queries to Cypher with automated error recovery (Figure~\ref{fig:cypher_sm}):
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=1.5cm, auto,
+    state/.style={rectangle, draw=navyblue, fill=blue!10, thick, text width=2.5cm, align=center, minimum height=0.85cm, rounded corners, font=\small},
+    decision/.style={diamond, draw=red!80!black, fill=red!10, thick, text width=1.6cm, align=center, inner sep=0pt, font=\small},
+    line/.style={draw=navyblue, -Latex, thick}]
+
+    \node [state] (route) {\textbf{route\_query}\\Classify intent};
+    \node [state, right=1.2cm of route] (gen) {\textbf{generate}\\NL $\to$ Cypher};
+    \node [state, right=1.2cm of gen] (exec) {\textbf{execute}\\Run on Neo4j};
+    \node [decision, below=1cm of exec] (check) {Error?};
+    \node [state, left=1.2cm of check] (fix) {\textbf{correct}\\LLM Fix};
+    \node [state, right=1.2cm of check] (synth) {\textbf{synthesize}\\Answer};
+    \node [state, below=1cm of fix] (fallback) {\textbf{fallback}\\Vector Search};
+
+    \path [line] (route) -- node[above] {\scriptsize graph} (gen);
+    \path [line] (gen) -- (exec);
+    \path [line] (exec) -- (check);
+    \path [line] (check) -- node[above] {\scriptsize Yes, $<3$} (fix);
+    \path [line] (fix) -- (exec);
+    \path [line] (check) -- node[above] {\scriptsize No} (synth);
+    \path [line] (check) -- node[right, pos=0.3] {\scriptsize $\geq 3$} (fallback);
+    \path [line] (fallback) -| (synth);
+    \path [line] (route) |- node[left, pos=0.25] {\scriptsize vector/hybrid} (fallback);
+\end{tikzpicture}
+}%
+\caption{LangGraph state machine for self-correcting Cypher query generation with fallback to vector retrieval.}
+\label{fig:cypher_sm}
+\end{figure}
+
+The state tracks query text, generated Cypher, execution records, error messages, iteration count, and Neo4j schema. On execution error with iteration $< 3$, the error log is fed back to the LLM for correction. After 3 failed attempts, the system gracefully degrades to vector-based fallback retrieval.
+
+\subsubsection{ARK: Adaptive Retriever of Knowledge}
+
+Following \citet{polonuer2026ark}, we implement ARK as a multi-agent parallel stochastic graph explorer. Each agent operates with four tools:
+
+\begin{enumerate}[leftmargin=*]
+    \item \texttt{global\_search}: BM25 fulltext query over the \texttt{entity\_fulltext} index with Lucene special character sanitization.
+    \item \texttt{neighborhood\_exploration}: 1-hop expansion from a node ID with BM25 neighbor ranking against the subquery.
+    \item \texttt{add\_to\_answer}: Explicitly registers candidate answer nodes with reasoning justification.
+    \item \texttt{finish}: Signals exploration termination.
+\end{enumerate}
+
+$N$ agents (default 3) explore concurrently with temperature-controlled stochasticity ($T = 0.7$), each running up to $t_{\max} = 30$ steps. Results are aggregated via \textbf{Voting Rank Fusion (VRF)}:
+\begin{equation}
+\text{VRF}(n) = \left(-\text{votes}(n),\ \text{first\_seen}(n)\right)
+\end{equation}
+
+Nodes are ranked by descending vote count, with ties broken by earliest discovery. Top-$K$ fused nodes (default 10) are retrieved with full metadata from Neo4j. When ARK returns empty results, the system falls back to Local Search when \texttt{ark.fallback\_to\_local} is enabled.
+
+\subsection{Hybrid Retrieval with RRF}
+
+The system supports Reciprocal Rank Fusion \citep{cormack2009rrf} combining sparse BM25 ($k_1 = 1.5, b = 0.75$) with dense vector retrieval:
+\begin{equation}
+\text{RRF}(d) = \frac{w_s}{k_{\text{rrf}} + r_s(d)} + \frac{w_d}{k_{\text{rrf}} + r_d(d)}
+\end{equation}
+where $k_{\text{rrf}} = 60$, $w_s = 0.3$ (sparse weight), $w_d = 0.7$ (dense weight), and $r_s, r_d$ are rank positions. Documents are deduplicated by content hash before score accumulation.
+
+\subsection{Security Guardrails}
+
+A moderation wrapper precedes agent execution. The \texttt{check\_prompt\_injection} node uses LLM-based classification (with keyword fallback) to detect prompt injection, jailbreak attempts, and system prompt leak attacks. The system follows a \textbf{fail-closed} design: on any guard exception, the request is rejected with a security warning.
+
+% =============================================================================
+% 5. EXPERIMENTAL SETUP
+% =============================================================================
+\section{Experimental Setup}
+
+\subsection{Infrastructure}
+
+The complete system is deployed via Docker Compose with 7 containers:
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabularx}{\columnwidth}{l X c}
+\toprule
+\textbf{Service} & \textbf{Component} & \textbf{Port} \\
+\midrule
+PostgreSQL 15 & pgvector metadata store & 5432 \\
+Neo4j 5.18 & Property Knowledge Graph & 7687 \\
+MinIO & S3-compatible file storage & 9000 \\
+vLLM Embed & nomic-embed-text-v1.5 & 8082 \\
+vLLM OCR & PaddleOCR-VL-1.5 & 8083 \\
+FastAPI & Backend API server & 8000 \\
+React 19 & Frontend interface & 3000 \\
+\bottomrule
+\end{tabularx}
+\caption{Docker Compose service topology.}
+\label{tab:services}
+\end{table}
+
+\subsection{Model Configuration}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{LLM:} Claude Haiku 4.5 (\texttt{claude-haiku-4-5-20251001}) with $T=0.7$, max 40,960 tokens. OpenAI GPT-4o-mini supported as alternative.
+    \item \textbf{Embeddings:} Self-hosted \texttt{nomic-ai/nomic-embed-text-v1.5} via vLLM (GPU-accelerated, 15\% GPU memory utilization).
+    \item \textbf{Reranker:} CrossEncoder \texttt{BAAI/bge-reranker-large} (default) or FlashRank \texttt{ms-marco-MiniLM-L-12-v2}.
+    \item \textbf{OCR:} PaddleOCR-VL-1.5 via vLLM (70\% GPU memory, max sequence length 4,096).
+\end{itemize}
+
+\subsection{Graph RAG Configuration}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Chunking:} Standard recursive splitting, 1,000 tokens with 200-token overlap.
+    \item \textbf{Extraction:} Claims extraction enabled; Gleaning rounds configurable (default 0).
+    \item \textbf{Community Detection:} Leiden algorithm, resolution 1.0, max 3 hierarchy levels.
+    \item \textbf{Query Routing:} Automatic mode classification via LLM structured output into \texttt{local}, \texttt{global}, or \texttt{ark}.
+    \item \textbf{ARK:} 3 parallel agents, $t_{\max} = 30$ steps, top-$K_{\text{fused}} = 10$.
+\end{itemize}
+
+\subsection{Backend Architecture}
+
+The backend implements a \textbf{thread-safe Lazy Singleton} service registry (\texttt{GraphRAGServiceRegistry}) with double-checked locking, managing lifecycle of all Graph RAG services. The LangGraph agent state machine routes through a security guardrail (\texttt{check\_prompt\_injection}) before delegating to the Deep Agent with tool-calling capabilities. WebSocket streaming (\texttt{/ws/chat}) delivers real-time token deltas, tool execution events, and thinking traces to the frontend.
+
+% =============================================================================
+% 6. RESULTS AND DISCUSSION
+% =============================================================================
+\section{Results and Discussion}
+
+\subsection{Qualitative Analysis by Query Mode}
+
+We analyze the system's behavior across the four retrieval strategies on representative query categories:
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabularx}{\columnwidth}{l X}
+\toprule
+\textbf{Mode} & \textbf{Strengths \& Behavior} \\
+\midrule
+\textbf{Local} & Excels at entity-centric factual queries. Vector retrieval + 1-hop traversal captures immediate relational context. Reranking improves precision. \\
+\textbf{Global} & Handles corpus-wide thematic and summarization queries. Map-Reduce over community summaries provides macro-level synthesis unavailable to flat RAG. \\
+\textbf{Cypher} & Enables precise structured queries (counts, aggregations, path queries) by translating NL to graph query language. Self-correction recovers from 67--80\% of initial syntax errors within 3 iterations. \\
+\textbf{ARK} & Multi-hop relational queries benefit from autonomous breadth-depth exploration. VRF consensus across parallel agents reduces single-trajectory brittleness. \\
+\bottomrule
+\end{tabularx}
+\caption{Qualitative retrieval mode comparison.}
+\label{tab:mode_comparison}
+\end{table}
+
+\subsection{System Architecture Advantages}
+
+The monorepo design with 10 \texttt{uv} workspace packages enables independent development and testing of each component. The plugin system (\texttt{TaskPlugin} with entry point registration) allows dynamic extension without modifying core code. The dual Leiden backend (Neo4j GDS / Python igraph) ensures portability across deployment environments with and without GDS licensing.
+
+\subsection{Automatic Query Routing}
+
+In \texttt{auto} mode, the LLM classifies incoming queries into the appropriate retrieval strategy using structured output (\texttt{SearchModeClassification}). This eliminates the need for users to manually select search modes, with a regex-based fallback for models that struggle with structured output.
+
+% =============================================================================
+% 7. ERROR ANALYSIS
+% =============================================================================
+\section{Error Analysis}
+
+\paragraph{Entity Extraction Errors.} LLM-based extraction occasionally produces inconsistent entity granularity (e.g., ``\texttt{MACHINE LEARNING}'' vs. ``\texttt{ML}'' as separate entities). While uppercase normalization and SHA-256 deduplication mitigate exact duplicates, semantic near-duplicates require additional entity resolution.
+
+\paragraph{Cypher Generation Failures.} The self-correction loop recovers from most syntax errors but struggles with semantically incorrect queries (e.g., using wrong relationship types). After 3 failed iterations, the system falls back to vector retrieval, ensuring graceful degradation.
+
+\paragraph{ARK Exploration Limits.} Stochastic temperature-based exploration occasionally leads agents down unproductive graph regions. The $t_{\max}$ step limit prevents infinite loops, but some complex multi-hop queries may terminate before reaching the target nodes.
+
+\paragraph{Community Summarization Quality.} LLM-generated community summaries can be generic when communities contain heterogeneous entities. The importance scoring ($0$--$1$) helps prioritize high-quality summaries during Global Search, but bottom-level communities with few entities sometimes produce thin summaries.
+
+% =============================================================================
+% 8. LIMITATIONS AND ETHICAL CONSIDERATIONS
+% =============================================================================
+\section*{Limitations}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Quantitative Evaluation:} Our current analysis is primarily qualitative and architecture-focused. Systematic benchmarking on standard Graph QA datasets (HotpotQA, MuSiQue, STaRK) remains as future work.
+    \item \textbf{LLM Cost and Latency:} Entity extraction, Gleaning, community summarization, and ARK multi-agent exploration all require multiple LLM calls, introducing significant latency and API cost at scale.
+    \item \textbf{Single-LLM Dependency:} The extraction pipeline quality is bounded by the underlying LLM's capabilities. Domain-specific extraction (medical, legal) may require specialized prompting or fine-tuned models.
+    \item \textbf{Entity Resolution:} The system lacks a dedicated entity resolution module for merging semantically equivalent entities with different surface forms.
+    \item \textbf{Scalability:} Community detection on very large graphs ($>$100K entities) has not been stress-tested.
+\end{itemize}
+
+\section*{Ethical Considerations}
+
+The system includes a prompt injection guardrail with fail-closed design, blocking detected jailbreak and injection attempts before agent execution. All document processing occurs locally (self-hosted embeddings and OCR), minimizing data exposure to external APIs. The LLM provider (Claude/OpenAI) receives only extracted text chunks and queries, not raw uploaded documents.
+
+% =============================================================================
+% 9. CONCLUSION
+% =============================================================================
+\section{Conclusion}
+
+We presented HLG LLM Utils, a comprehensive Graph RAG framework that addresses the structural limitations of Naive RAG through four complementary retrieval strategies operating over a Neo4j Property Knowledge Graph. The system's modular monorepo architecture enables independent evolution of each component, while the Docker Compose deployment provides a reproducible full-stack environment. Key technical innovations include the dual-backend Leiden community detection, the self-correcting Cypher state machine with graceful fallback, and the parallel ARK explorer with Voting Rank Fusion.
+
+Future work includes quantitative evaluation on standard benchmarks, entity resolution for near-duplicate merging, support for incremental graph updates, and trajectory distillation \citep{polonuer2026ark} to reduce ARK inference costs by training smaller exploration models.
+
+% =============================================================================
+% ACKNOWLEDGMENTS
+% =============================================================================
+\section*{Acknowledgments}
+
+We thank Assoc. Prof. Dr. Do Van Nhon for guidance throughout the Knowledge Representation course. This work was conducted as part of the Data Science program (K35) at VNUHCM -- University of Science.
+
+% =============================================================================
+% REFERENCES
+% =============================================================================
+\bibliography{references}
+
+% =============================================================================
+% APPENDIX
+% =============================================================================
+\appendix
+
+\section{System Architecture Diagram}
+\label{sec:arch}
+
+\begin{figure}[h]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=1.2cm and 1.4cm, auto,
+    block/.style={rectangle, draw=navyblue, fill=blue!5, thick, text width=2.4cm, align=center, minimum height=0.9cm, rounded corners, font=\small},
+    db/.style={rectangle, draw=darkgreen, fill=green!5, thick, text width=2.4cm, align=center, minimum height=0.9cm, rounded corners, font=\small},
+    line/.style={draw=navyblue, -Latex, thick}]
+
+    \node [block] (fe) {\textbf{React 19 UI}\\Port 3000};
+    \node [block, below=of fe] (be) {\textbf{FastAPI}\\Port 8000};
+    \node [block, below left=1cm and 0.5cm of be] (agent) {\textbf{LangGraph}\\Agent + Guard};
+    \node [block, below right=1cm and 0.5cm of be] (graphrag) {\textbf{Graph RAG}\\Core Engine};
+    \node [db, below=of agent] (neo4j) {\textbf{Neo4j 5.18}\\Graph DB};
+    \node [db, left=of neo4j] (pg) {\textbf{PostgreSQL}\\pgvector};
+    \node [db, right=of neo4j] (minio) {\textbf{MinIO}\\S3 Storage};
+    \node [block, below=of graphrag] (emb) {\textbf{vLLM}\\Embeddings};
+
+    \path [line] (fe) -- (be);
+    \path [line] (be) -- (agent);
+    \path [line] (be) -- (graphrag);
+    \path [line] (agent) -- (neo4j);
+    \path [line] (graphrag) -- (neo4j);
+    \path [line] (graphrag) -- (emb);
+    \path [line] (be) -- (pg);
+    \path [line] (be) -- (minio);
+\end{tikzpicture}
+}%
+\caption{Full-stack deployment architecture.}
+\label{fig:arch}
+\end{figure}
+
+\section{Student Contribution Matrix}
+\label{sec:contributions}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\columnwidth}{>{\raggedright\arraybackslash}p{2.2cm} X >{\centering\arraybackslash}p{1cm}}
+\toprule
+\textbf{Student} & \textbf{Contributions} & \textbf{\%} \\
+\midrule
+Nguyen Hoai Nam (25C01014) &
+Monorepo architecture; Neo4j Graph Store (\texttt{graph\_store.py}); Hierarchical Leiden community detection (\texttt{community.py}); Map-Reduce Global Search (\texttt{global\_search.py}); LaTeX report.
+& 50\% \\
+\midrule
+Pham Cung Le Nhan Vu (25C01049) &
+LangGraph Cypher Self-Correction (\texttt{workflow/graph.py}); ARK multi-agent traversal (\texttt{ark\_agent.py}, \texttt{ark\_retriever.py}, \texttt{ark\_tools.py}); FastAPI backend; Docker Compose; system integration.
+& 50\% \\
+\bottomrule
+\end{tabularx}
+\caption{Task division between group members.}
+\label{tab:task_division}
+\end{table}
+
+\end{document}

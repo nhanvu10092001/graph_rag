@@ -1,5 +1,5 @@
 graph_name: "prime"
-model_name: "Qwen/Qwen3-4B"
+model_name: "Qwen/Qwen3-0.6B"
 train_trajectories_dir: "data/experiments/prime/graph_explorer_oracle_traj/train"
 val_trajectories_dir: "data/experiments/prime/graph_explorer_oracle_traj/val"
 output_dir: "data/finetuning"

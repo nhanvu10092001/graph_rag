@@ -179,12 +179,22 @@ def load_model(graph_explorer_config):
                 )
         else:
             vllm_port = os.environ.get("VLLM_PORT", "8000")
-            model = VLLMQwenModel(
-                server_base_url=f"http://localhost:{vllm_port}/v1",
-                name=graph_explorer_config.model_name,
-                enable_thinking=graph_explorer_config.enable_thinking,
-                max_workers=n_agents,
-            )
+            try:
+                import urllib.request
+                urllib.request.urlopen(f"http://localhost:{vllm_port}/v1/models", timeout=1)
+                model = VLLMQwenModel(
+                    server_base_url=f"http://localhost:{vllm_port}/v1",
+                    name=graph_explorer_config.model_name,
+                    enable_thinking=graph_explorer_config.enable_thinking,
+                    max_workers=n_agents,
+                )
+            except Exception:
+                model = QwenModel(
+                    name=graph_explorer_config.model_name,
+                    quantized=graph_explorer_config.quantized,
+                    enable_thinking=graph_explorer_config.enable_thinking,
+                )
+                model.max_workers = 1
     else:
         openai_base = os.environ.get("OPENAI_API_BASE")
         if openai_base:

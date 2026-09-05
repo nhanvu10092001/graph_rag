@@ -183,7 +183,6 @@ Output: LoRA adapter lưu tại `data/finetuning/`.
 |---------------|-----------|------------|---------------|
 | Qwen3-0.6B   | 4         | 8192       | ~8 GB         |
 | Qwen3-1.7B   | 2         | 8192       | ~16 GB        |
-| Qwen3-4B     | 1         | 8192       | ~24 GB        |
 | Qwen3-8B     | 1         | 16384      | ~40 GB        |
 
 ## Step 4: Serve fine-tuned model qua vLLM

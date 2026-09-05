@@ -8,7 +8,7 @@
 #   ./scripts/tune_model.sh <HF_MODEL_ID> [--graph <name>] [--gpu <idx>]
 #
 # Examples:
-#   ./scripts/tune_model.sh Qwen/Qwen3-4B
+#   ./scripts/tune_model.sh Qwen/Qwen3-0.6B
 #   ./scripts/tune_model.sh Qwen/Qwen3-0.6B --gpu 3
 #
 # Batch / max_length are chosen from model size. GPU is auto-picked as the one

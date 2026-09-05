@@ -10,9 +10,7 @@ Thư mục này chứa notebook demo end-to-end cho pipeline **ARK** — multi-a
 examples/
 ├── demo_ark_tools.ipynb        # Notebook demo chính
 ├── demo_graph_rag.py           # Script demo Graph RAG cơ bản
-├── qwen3_4b_finetuned/         # Symlink → model Qwen3-4B fine-tuned (merged, INT4)
 ├── qwen3_0.6b_distilled/       # Symlink → model Qwen3-0.6B distilled (LoRA adapter, INT4)
-├── qwen3_4b_evaluation.png     # Biểu đồ evaluation Qwen3-4B
 ├── report/                     # Thư mục chứa báo cáo chi tiết & ACL LaTeX
 │   ├── ark_model_training_evaluation_report.md # Báo cáo chi tiết quá trình training & evaluation
 │   ├── ark_training_report.md  # Báo cáo kỹ thuật tổng hợp
@@ -45,11 +43,10 @@ docker compose up neo4j -d
 # Username: neo4j / Password: password123
 ```
 
-#### 2. LLM Backend (chọn 1 trong 4)
+#### 2. LLM Backend (chọn 1 trong 3)
 
 | Option | Yêu cầu | Ghi chú |
 |--------|----------|---------|
-| `qwen3-4b` | GPU >= 4GB VRAM | Fine-tuned model, cần download weights |
 | `qwen3-0.6b` | GPU >= 2GB VRAM | Distilled model, cần download weights |
 | `gemini` | Gemini proxy server đang chạy | Dùng Anthropic Messages API proxy |
 | `openai` | `OPENAI_API_KEY` | Đơn giản nhất, không cần GPU |
@@ -97,7 +94,7 @@ Sửa các biến trong cell `Configuration & Model Selection`:
 
 ```python
 # Chọn model
-MODEL_CHOICE = "openai"  # hoặc "qwen3-4b", "qwen3-0.6b", "gemini"
+MODEL_CHOICE = "openai"  # hoặc "qwen3-0.6b", "gemini"
 
 # Nếu dùng OpenAI
 OPENAI_API_KEY = "sk-..."
@@ -105,7 +102,6 @@ OPENAI_MODEL = "gpt-4o-mini"  # hoặc "gpt-4o"
 
 # Nếu dùng Qwen (đảm bảo symlink/path đúng)
 MODEL_PATHS = {
-    "qwen3-4b": "./qwen3_4b_finetuned",
     "qwen3-0.6b": "./qwen3_0.6b_distilled",
 }
 
@@ -126,7 +122,6 @@ ARK_TOP_K_FUSED = 10  # Top-K nodes sau Voting Rank Fusion
 
 Chạy cell load model. Tùy `MODEL_CHOICE`:
 - **OpenAI/Gemini**: Load nhanh (chỉ init API client)
-- **Qwen3-4B**: ~30s, cần ~3.5GB VRAM (INT4 quantized)
 - **Qwen3-0.6B**: ~15s, cần ~1.2GB VRAM (LoRA adapter + INT4)
 
 #### Bước 4 — Kết nối Neo4j (Section 3)
@@ -180,30 +175,11 @@ answer = await ark_qa("Where is the headquarters of the partner company of Alice
 
 #### Bước 10 — Evaluation Report (Section 9)
 
-Xem kết quả evaluation của Qwen3-4B fine-tuned và Qwen3-0.6B distilled trên STaRK-PrimeKG benchmark.
+Xem kết quả evaluation của Qwen3-0.6B distilled trên STaRK-PrimeKG benchmark.
 
 ---
 
 ### Chuẩn bị model weights (nếu dùng Qwen)
-
-#### Qwen3-4B Fine-tuned
-
-Model đã được merge (LoRA → full model) và lưu tại:
-```
-ark/data/finetuning/prime/Qwen3-4B/f4f2/merged/
-```
-
-Symlink đã được tạo sẵn:
-```bash
-ls -la qwen3_4b_finetuned
-# -> ../../ark/data/finetuning/prime/Qwen3-4B/f4f2/merged/
-```
-
-Nếu chưa có, tạo lại:
-```bash
-cd RAG_package/examples
-ln -sf ../../ark/data/finetuning/prime/Qwen3-4B/f4f2/merged qwen3_4b_finetuned
-```
 
 #### Qwen3-0.6B Distilled
 
@@ -241,10 +217,10 @@ Thư mục `report/` chứa các tài liệu báo cáo chuyên sâu:
 ### 1. Báo cáo Chi tiết Quá trình Training & Evaluation (`report/ark_model_training_evaluation_report.md`)
 Báo cáo khoa học toàn diện ghi lại chi tiết:
 - Toàn bộ pipeline sinh dữ liệu & Rejection Sampling ($Recall@20 > 0$) trên đồ thị **STaRK-PrimeKG**.
-- Cấu hình siêu tham số LoRA (Qwen3-4B) và QLoRA (Qwen3-0.6B).
+- Cấu hình siêu tham số QLoRA (Qwen3-0.6B).
 - Đường cong học tập, log loss theo từng step và phân tích token accuracy.
 - Bảng so sánh hiệu năng downstream (Hit@1, Hit@5, Hit@10, Recall@10, Recall@20, MRR).
-- Phân tích hiện tượng Shortcut Learning ở Qwen3-4B FT và tác dụng của Trajectory Distillation ở Qwen3-0.6B.
+- Tác dụng của Trajectory Distillation ở Qwen3-0.6B so với zero-shot baselines.
 
 ### 2. Báo cáo ACL LaTeX Format (`report/acl_paper.tex`)
 - Compile PDF:

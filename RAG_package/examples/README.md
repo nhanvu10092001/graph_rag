@@ -13,12 +13,11 @@ examples/
 ├── qwen3_4b_finetuned/         # Symlink → model Qwen3-4B fine-tuned (merged, INT4)
 ├── qwen3_0.6b_distilled/       # Symlink → model Qwen3-0.6B distilled (LoRA adapter, INT4)
 ├── qwen3_4b_evaluation.png     # Biểu đồ evaluation Qwen3-4B
-├── report_acl_format/           # Report LaTeX theo format ACL
-│   ├── acl_paper.tex           # Source LaTeX chính
-│   ├── acl.sty                 # ACL style file
-│   ├── acl_natbib.bst          # Bibliography style
+├── report/                     # Thư mục chứa báo cáo chi tiết & ACL LaTeX
+│   ├── ark_model_training_evaluation_report.md # Báo cáo chi tiết quá trình training & evaluation
+│   ├── ark_training_report.md  # Báo cáo kỹ thuật tổng hợp
+│   ├── acl_paper.tex           # Source LaTeX chuẩn ACL
 │   ├── references.bib          # References
-│   ├── custom.bib              # Custom bibliography entries
 │   └── report.pdf              # PDF đã compile
 └── README.md                   # File này
 ```
@@ -235,38 +234,24 @@ ln -sf ../../ark/data/finetuning/prime/Qwen3-0.6B/cfc5 qwen3_0.6b_distilled
 
 ---
 
-## Report ACL Format
+## Báo cáo Kỹ thuật & Training Report
 
-Thư mục `report_acl_format/` chứa report LaTeX theo chuẩn ACL (Association for Computational Linguistics):
+Thư mục `report/` chứa các tài liệu báo cáo chuyên sâu:
 
-### Compile PDF
+### 1. Báo cáo Chi tiết Quá trình Training & Evaluation (`report/ark_model_training_evaluation_report.md`)
+Báo cáo khoa học toàn diện ghi lại chi tiết:
+- Toàn bộ pipeline sinh dữ liệu & Rejection Sampling ($Recall@20 > 0$) trên đồ thị **STaRK-PrimeKG**.
+- Cấu hình siêu tham số LoRA (Qwen3-4B) và QLoRA (Qwen3-0.6B).
+- Đường cong học tập, log loss theo từng step và phân tích token accuracy.
+- Bảng so sánh hiệu năng downstream (Hit@1, Hit@5, Hit@10, Recall@10, Recall@20, MRR).
+- Phân tích hiện tượng Shortcut Learning ở Qwen3-4B FT và tác dụng của Trajectory Distillation ở Qwen3-0.6B.
 
+### 2. Báo cáo ACL LaTeX Format (`report/acl_paper.tex`)
+- Compile PDF:
 ```bash
-cd report_acl_format
-
-# Compile với bibliography
+cd report
 pdflatex acl_paper.tex
 bibtex acl_paper
 pdflatex acl_paper.tex
 pdflatex acl_paper.tex
-
-# Hoặc dùng latexmk
-latexmk -pdf acl_paper.tex
 ```
-
-### Nội dung report
-
-Report trình bày toàn bộ framework HLG LLM Utils, bao gồm:
-- Property Knowledge Graph construction (Neo4j)
-- Hierarchical Leiden community detection
-- 4 retrieval strategies: Local, Global, Cypher Self-Correction, ARK
-- ARK multi-agent parallel exploration với Voting Rank Fusion
-- Qwen3-4B fine-tuning và Qwen3-0.6B distillation results
-- Full-stack deployment architecture
-
-### Sửa đổi report
-
-- `acl_paper.tex` — Source chính, sửa nội dung ở đây
-- `references.bib` — Thêm references mới vào file này
-- `custom.bib` — References tùy chỉnh thêm
-- `acl.sty` — Style file ACL (không cần sửa)

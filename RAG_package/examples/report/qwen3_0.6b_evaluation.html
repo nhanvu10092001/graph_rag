@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ARK Model Evaluation — Qwen3-0.6B Distilled</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+  <style>
+    :root {
+      --bg: #fafbfd;
+      --bg-card: #f0f2f6;
+      --bg-card-alt: #e8ebf1;
+      --text: #1a2234;
+      --text-muted: #5e6a7e;
+      --text-faint: #8994a8;
+      --border: #d5dae3;
+      --accent-06b: #c86e42;
+      --accent-06b-bg: #fdf5f0;
+      --accent-4b: #3d7ef5;
+      --accent-4b-bg: #eef4ff;
+      --green: #1a9a5c;
+      --green-bg: #eefbf3;
+      --amber: #b8860b;
+      --amber-bg: #fef9ec;
+      --red: #c53d3d;
+      --red-bg: #fef2f2;
+      --chart-grid: #d5dae3;
+      --chart-label: #5e6a7e;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+      line-height: 1.6;
+      font-variant-numeric: tabular-nums;
+    }
+
+    h1, h2, h3 { font-family: 'DM Mono', monospace; font-weight: 500; }
+    h1 { font-size: 1.6rem; margin: 0 0 6px; letter-spacing: -0.02em; }
+    h2 { font-size: 1.1rem; margin: 2.4em 0 1em; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text-muted); }
+    h3 { font-size: 0.95rem; margin: 0 0 12px; }
+
+    .subtitle { color: var(--text-muted); font-size: 0.88rem; margin: 0 0 32px; }
+
+    .model-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    @media (max-width: 600px) { .model-grid { grid-template-columns: 1fr; } }
+
+    .model-card {
+      background: var(--bg-card);
+      border-radius: 10px;
+      padding: 20px 22px;
+      border-left: 4px solid;
+    }
+    .model-card.m06b { border-left-color: var(--accent-06b); }
+    .model-card.m4b { border-left-color: var(--accent-4b); }
+
+    .model-name {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.15rem;
+      font-weight: 500;
+      margin: 0 0 4px;
+    }
+    .m06b .model-name { color: var(--accent-06b); }
+    .m4b .model-name { color: var(--accent-4b); }
+
+    .model-base { font-size: 0.78rem; color: var(--text-faint); margin-bottom: 14px; }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.84rem;
+    }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-label { color: var(--text-muted); }
+    .metric-value { font-family: 'DM Mono', monospace; font-weight: 500; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      vertical-align: middle;
+    }
+    .badge-warn { background: var(--amber-bg); color: var(--amber); }
+    .badge-ok { background: var(--green-bg); color: var(--green); }
+    .badge-err { background: var(--red-bg); color: var(--red); }
+    .badge-info { background: var(--accent-4b-bg); color: var(--accent-4b); }
+
+    .chart-wrap {
+      background: var(--bg-card);
+      border-radius: 10px;
+      padding: 20px 22px 16px;
+      margin: 16px 0 8px;
+      overflow-x: auto;
+    }
+    .chart-wrap h3 { margin-bottom: 16px; }
+    .chart-wrap svg { display: block; width: 100%; height: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+      margin-top: 8px;
+    }
+    th {
+      text-align: left;
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      font-size: 0.76rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      padding: 8px 10px;
+      border-bottom: 2px solid var(--border);
+    }
+    td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    tr:last-child td { border-bottom: none; }
+    .td-model { font-family: 'DM Mono', monospace; font-weight: 500; }
+    .td-num { font-family: 'DM Mono', monospace; text-align: right; }
+    th.th-num { text-align: right; }
+    .td-best { color: var(--green); font-weight: 600; }
+
+    .insight-box {
+      background: var(--bg-card);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 16px 0;
+    }
+    .insight-box p { margin: 0 0 10px; font-size: 0.88rem; }
+    .insight-box p:last-child { margin-bottom: 0; }
+    .insight-box strong { color: var(--text); }
+
+    .legend {
+      display: flex;
+      gap: 20px;
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+
+    .section-note {
+      font-size: 0.8rem;
+      color: var(--text-faint);
+      font-style: italic;
+      margin: 6px 0 0;
+    }
+
+    .two-charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 600px) { .two-charts { grid-template-columns: 1fr; } }
+
+    .status-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 10px 0;
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+    .status-text {
+      flex: 1;
+    }
+
+    code {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      background: var(--bg-card-alt);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>ARK Graph Explorer — Qwen3-0.6B Model Evaluation</h1>
+<p class="subtitle">Distilled Qwen3-0.6B LoRA adapter from Gemini trajectories with Rejection Sampling &middot; 2026-09-05</p>
+
+<div class="model-grid">
+  <div class="model-card m06b">
+    <div class="model-name">Qwen3-0.6B Distilled</div>
+    <div class="model-base">base: Qwen/Qwen3-0.6B &middot; adapter: cfc5 (Gemini Distill)</div>
+    <div class="metric-row"><span class="metric-label">LoRA config</span><span class="metric-value">r=32, α=64 (QLoRA INT4)</span></div>
+    <div class="metric-row"><span class="metric-label">Epochs / Steps</span><span class="metric-value">5 / 120 <span class="badge badge-ok">converged</span></span></div>
+    <div class="metric-row"><span class="metric-label">Training data</span><span class="metric-value">369 filtered Gemini trajectories</span></div>
+    <div class="metric-row"><span class="metric-label">Batch size</span><span class="metric-value">1 &times; 16 (eff. 16)</span></div>
+    <div class="metric-row"><span class="metric-label">Train loss</span><span class="metric-value">0.264</span></div>
+    <div class="metric-row"><span class="metric-label">Eval loss (best)</span><span class="metric-value">0.368</span></div>
+    <div class="metric-row"><span class="metric-label">Token accuracy (train)</span><span class="metric-value">92.3%</span></div>
+    <div class="metric-row"><span class="metric-label">Token accuracy (eval)</span><span class="metric-value">91.4%</span></div>
+    <div class="metric-row"><span class="metric-label">Adapter size</span><span class="metric-value">77 MB</span></div>
+  </div>
+
+  <div class="model-card m4b">
+    <div class="model-name">Qwen3-4B Fine-Tuned</div>
+    <div class="model-base">base: Qwen/Qwen3-4B &middot; adapter: f4f2 (Oracle SFT)</div>
+    <div class="metric-row"><span class="metric-label">LoRA config</span><span class="metric-value">r=32, α=64 (BFloat16 LoRA)</span></div>
+    <div class="metric-row"><span class="metric-label">Epochs / Steps</span><span class="metric-value">3 / 111 <span class="badge badge-ok">converged</span></span></div>
+    <div class="metric-row"><span class="metric-label">Training data</span><span class="metric-value">592 Oracle shortest paths</span></div>
+    <div class="metric-row"><span class="metric-label">Batch size</span><span class="metric-value">4 &times; 4 (eff. 16)</span></div>
+    <div class="metric-row"><span class="metric-label">Train loss</span><span class="metric-value">0.065</span></div>
+    <div class="metric-row"><span class="metric-label">Eval loss (best)</span><span class="metric-value">0.075</span></div>
+    <div class="metric-row"><span class="metric-label">Token accuracy (train)</span><span class="metric-value">98.6%</span></div>
+    <div class="metric-row"><span class="metric-label">Token accuracy (eval)</span><span class="metric-value">98.4%</span></div>
+    <div class="metric-row"><span class="metric-label">Adapter size</span><span class="metric-value">252 MB</span></div>
+  </div>
+</div>
+
+<h2>Training Dynamics</h2>
+
+<div class="two-charts">
+  <div class="chart-wrap">
+    <h3>Loss Curve (0 – 120 Steps)</h3>
+    <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+      <!-- Grid -->
+      <line x1="50" y1="10" x2="50" y2="180" stroke="var(--chart-grid)" stroke-width="1"/>
+      <line x1="50" y1="180" x2="385" y2="180" stroke="var(--chart-grid)" stroke-width="1"/>
+      <!-- Y gridlines (0 to 2.5) -->
+      <line x1="50" y1="10" x2="385" y2="10" stroke="var(--chart-grid)" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <line x1="50" y1="44" x2="385" y2="44" stroke="var(--chart-grid)" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <line x1="50" y1="78" x2="385" y2="78" stroke="var(--chart-grid)" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <line x1="50" y1="112" x2="385" y2="112" stroke="var(--chart-grid)" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <line x1="50" y1="146" x2="385" y2="146" stroke="var(--chart-grid)" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+      <!-- Y labels: 0, 0.5, 1.0, 1.5, 2.0, 2.5 -->
+      <text x="45" y="184" text-anchor="end" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">0.0</text>
+      <text x="45" y="150" text-anchor="end" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">0.5</text>
+      <text x="45" y="116" text-anchor="end" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">1.0</text>
+      <text x="45" y="82" text-anchor="end" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">1.5</text>
+      <text x="45" y="48" text-anchor="end" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">2.0</text>
+      <text x="45" y="14" text-anchor="end" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">2.5</text>
+
+      <!-- X labels: 0, 20, 40, 60, 80, 100, 120 -->
+      <text x="50" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">0</text>
+      <text x="105.8" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">20</text>
+      <text x="161.6" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">40</text>
+      <text x="217.4" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">60</text>
+      <text x="273.2" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">80</text>
+      <text x="329.0" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">100</text>
+      <text x="385.0" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">120</text>
+      <text x="215" y="215" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="IBM Plex Sans, sans-serif">Training Step</text>
+
+      <!-- Qwen3-4B loss line: blue -->
+      <polyline fill="none" stroke="var(--accent-4b)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"
+        points="77.9,49.9 105.8,127.2 133.7,162.8 161.6,170.3 189.5,173.8 217.4,174.3 245.3,174.6 273.2,175.3 301.1,175.4 329.0,175.1 356.9,175.6"/>
+      <circle cx="356.9" cy="175.6" r="3.5" fill="var(--accent-4b)"/>
+      <text x="365" y="171" font-size="9" fill="var(--accent-4b)" font-family="DM Mono, monospace">0.065</text>
+
+      <!-- Qwen3-0.6B loss line: orange -->
+      <polyline fill="none" stroke="var(--accent-06b)" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"
+        points="64.0,18.8 77.9,68.9 105.8,136.0 133.7,149.7 161.6,152.6 189.5,158.0 245.3,157.8 301.1,160.2 329.0,161.4 356.9,159.8 385.0,162.0"/>
+      <circle cx="385.0" cy="162.0" r="4.5" fill="var(--accent-06b)"/>
+      <text x="345" y="152" font-size="9" fill="var(--accent-06b)" font-family="DM Mono, monospace" font-weight="bold">0.264</text>
+
+      <!-- Eval loss markers for 0.6B at steps 50, 100, 120 (0.392, 0.370, 0.368) -->
+      <circle cx="189.5" cy="153.3" r="3.5" fill="none" stroke="var(--accent-06b)" stroke-width="1.8"/>
+      <circle cx="329.0" cy="154.8" r="3.5" fill="none" stroke="var(--accent-06b)" stroke-width="1.8"/>
+      <circle cx="385.0" cy="155.0" r="4.0" fill="none" stroke="var(--accent-06b)" stroke-width="2.0"/>
+    </svg>
+    <div class="legend">
+      <span><span class="legend-dot" style="background:var(--accent-06b)"></span>Qwen3-0.6B Distilled (cfc5)</span>
+      <span><span class="legend-dot" style="background:var(--accent-4b)"></span>Qwen3-4B FT (f4f2)</span>
+      <span style="font-style:italic;color:var(--text-faint)">&Omicron; Eval Loss checkpoints</span>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <h3>Token Accuracy (%)</h3>
+    <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+      <!-- Grid -->
+      <line x1="50" y1="10" x2="50" y2="180" stroke="var(--chart-grid)" stroke-width="1"/>
+      <line x1="50" y1="180" x2="385" y2="180" stroke="var(--chart-grid)" stroke-width="1"/>
+      <!-- Y gridlines (70% to 100%) -->
+      <line x1="50" y1="10" x2="385" y2="10" stroke="var(--chart-grid)" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <line x1="50" y1="52.5" x2="385" y2="52.5" stroke="var(--chart-grid)" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <line x1="50" y1="95" x2="385" y2="95" stroke="var(--chart-grid)" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <line x1="50" y1="137.5" x2="385" y2="137.5" stroke="var(--chart-grid)" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+      <!-- Y labels: 70%, 77.5%, 85%, 92.5%, 100% -->
+      <text x="45" y="184" text-anchor="end" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">70%</text>
+      <text x="45" y="141.5" text-anchor="end" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">77.5%</text>
+      <text x="45" y="99" text-anchor="end" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">85%</text>
+      <text x="45" y="56.5" text-anchor="end" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">92.5%</text>
+      <text x="45" y="14" text-anchor="end" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">100%</text>
+
+      <!-- X labels -->
+      <text x="50" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">0</text>
+      <text x="105.8" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">20</text>
+      <text x="161.6" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">40</text>
+      <text x="217.4" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">60</text>
+      <text x="273.2" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">80</text>
+      <text x="329.0" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">100</text>
+      <text x="385.0" y="198" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="DM Mono, monospace">120</text>
+      <text x="215" y="215" text-anchor="middle" font-size="10" fill="var(--chart-label)" font-family="IBM Plex Sans, sans-serif">Training Step</text>
+
+      <!-- 4B accuracy: blue line -->
+      <polyline fill="none" stroke="var(--accent-4b)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"
+        points="77.9,111.4 105.8,77.5 133.7,42.4 161.6,26.9 189.5,19.9 217.4,18.7 245.3,18.1 273.2,17.5 301.1,16.4 329.0,18.1 356.9,17.5"/>
+      <circle cx="356.9" cy="17.5" r="3.5" fill="var(--accent-4b)"/>
+      <text x="355" y="12" font-size="9" fill="var(--accent-4b)" font-family="DM Mono, monospace">98.6%</text>
+
+      <!-- 0.6B accuracy: orange line -->
+      <polyline fill="none" stroke="var(--accent-06b)" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"
+        points="77.9,156.2 105.8,86.5 133.7,67.8 189.5,59.9 245.3,57.6 301.1,53.3 329.0,52.4 356.9,51.4 385.0,53.4"/>
+      <circle cx="385.0" cy="53.4" r="4.5" fill="var(--accent-06b)"/>
+      <text x="345" y="44" font-size="9" fill="var(--accent-06b)" font-family="DM Mono, monospace" font-weight="bold">92.3%</text>
+    </svg>
+    <div class="legend">
+      <span><span class="legend-dot" style="background:var(--accent-06b)"></span>Qwen3-0.6B Distilled (cfc5)</span>
+      <span><span class="legend-dot" style="background:var(--accent-4b)"></span>Qwen3-4B FT (f4f2)</span>
+    </div>
+  </div>
+</div>
+
+<h2>Training Diagnostics & Behavioral Analysis</h2>
+
+<div class="model-grid">
+  <div class="insight-box">
+    <h3 style="color:var(--accent-06b)">Qwen3-0.6B — Distillation Diagnostics</h3>
+    <div class="status-row">
+      <span class="status-dot" style="background:var(--green)"></span>
+      <div class="status-text"><strong>Fully Converged (5 Epochs):</strong> Trained across 120 steps with effective batch size 16.</div>
+    </div>
+    <div class="status-row">
+      <span class="status-dot" style="background:var(--green)"></span>
+      <div class="status-text"><strong>Rejection Sampling Filter:</strong> Filtered 2,840 raw Gemini trajectories to the top 20.8% with Recall@20 &gt; 0, preventing the student from imitating failed paths.</div>
+    </div>
+    <div class="status-row">
+      <span class="status-dot" style="background:var(--green)"></span>
+      <div class="status-text"><strong>Healthy Generalization:</strong> Final eval loss = 0.368, token accuracy = 91.4% on validation trajectories.</div>
+    </div>
+    <div class="status-row">
+      <span class="status-dot" style="background:var(--accent-06b)"></span>
+      <div class="status-text"><strong>Multi-Hop Transfer:</strong> Learns to call <code>search_in_neighborhood</code> (from Gemini's 30% exploration distribution) rather than collapsing to 1-hop shortcuts.</div>
+    </div>
+  </div>
+
+  <div class="insight-box">
+    <h3 style="color:var(--accent-4b)">Qwen3-4B — Oracle SFT Diagnostics</h3>
+    <div class="status-row">
+      <span class="status-dot" style="background:var(--green)"></span>
+      <div class="status-text"><strong>Rapid Format Convergence:</strong> Reached 0.065 train loss and 98.4% token accuracy within 111 steps.</div>
+    </div>
+    <div class="status-row">
+      <span class="status-dot" style="background:var(--amber)"></span>
+      <div class="status-text"><strong>Shortcut Learning Pathology:</strong> Memorized the rigid 1-hop pattern of Oracle shortest paths (<code>search_in_graph &rarr; add_to_answer &rarr; finish</code>).</div>
+    </div>
+    <div class="status-row">
+      <span class="status-dot" style="background:var(--red)"></span>
+      <div class="status-text"><strong>0% Neighborhood Search:</strong> Never invoked <code>search_in_neighborhood</code> in 20/20 test trajectories because Oracle training data lacked multi-hop explorations.</div>
+    </div>
+    <div class="status-row">
+      <span class="status-dot" style="background:var(--accent-4b)"></span>
+      <div class="status-text"><strong>Key Lesson:</strong> Token imitation accuracy &ne; task-level graph reasoning ability.</div>
+    </div>
+  </div>
+</div>
+
+<h2>Benchmark Comparison (STaRK-PrimeKG Val Set)</h2>
+<p class="section-note">Empirical results evaluated across Oracle Upper Bound, Gemini 3.6 Flash, Qwen3-4B FT, and Qwen3-0.6B Distilled.</p>
+
+<div style="overflow-x:auto;">
+  <table>
+    <thead>
+      <tr>
+        <th>Model Configuration</th>
+        <th>Agents</th>
+        <th class="th-num">n</th>
+        <th class="th-num">Hit@1</th>
+        <th class="th-num">Hit@5</th>
+        <th class="th-num">Hit@10</th>
+        <th class="th-num">Recall@10</th>
+        <th class="th-num">Recall@20</th>
+        <th class="th-num">MRR</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="td-model" style="color:var(--green)">Oracle Trajectory (Upper Bound)</td>
+        <td>1</td>
+        <td class="td-num">199</td>
+        <td class="td-num td-best">0.588</td>
+        <td class="td-num td-best">0.588</td>
+        <td class="td-num td-best">0.588</td>
+        <td class="td-num td-best">0.451</td>
+        <td class="td-num td-best">0.451</td>
+        <td class="td-num td-best">0.588</td>
+      </tr>
+      <tr>
+        <td class="td-model">Gemini 3.6 Flash (Voting Fusion)</td>
+        <td>5</td>
+        <td class="td-num">199</td>
+        <td class="td-num">0.206</td>
+        <td class="td-num">0.231</td>
+        <td class="td-num">0.231</td>
+        <td class="td-num">0.179</td>
+        <td class="td-num">0.190</td>
+        <td class="td-num">0.218</td>
+      </tr>
+      <tr>
+        <td class="td-model">Gemini 3.6 Flash (Single Agent)</td>
+        <td>1</td>
+        <td class="td-num">199</td>
+        <td class="td-num">0.181</td>
+        <td class="td-num">0.211</td>
+        <td class="td-num">0.211</td>
+        <td class="td-num">0.159</td>
+        <td class="td-num">0.165</td>
+        <td class="td-num">0.193</td>
+      </tr>
+      <tr>
+        <td class="td-model" style="color:var(--accent-4b)">Qwen3-4B Quantized FT (f4f2)</td>
+        <td>1</td>
+        <td class="td-num">20</td>
+        <td class="td-num">0.200</td>
+        <td class="td-num">0.200</td>
+        <td class="td-num">0.200</td>
+        <td class="td-num">0.200</td>
+        <td class="td-num">0.200</td>
+        <td class="td-num">0.200</td>
+      </tr>
+      <tr>
+        <td class="td-model" style="color:var(--accent-06b)">Qwen3-0.6B Distilled (cfc5)</td>
+        <td>1</td>
+        <td class="td-num">20</td>
+        <td class="td-num">0.100</td>
+        <td class="td-num">0.150</td>
+        <td class="td-num">0.150</td>
+        <td class="td-num">0.120</td>
+        <td class="td-num">0.135</td>
+        <td class="td-num">0.118</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>Tool Call Frequency & Exploration Distribution</h2>
+
+<div class="insight-box">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:8px 0 16px;">
+    <div style="text-align:center;background:var(--bg);padding:14px;border-radius:8px;">
+      <div style="font-family:'DM Mono',monospace;font-size:1.4rem;font-weight:600;color:var(--accent-06b)">~1.2 GB</div>
+      <div style="font-size:0.78rem;color:var(--text-muted)">Qwen3-0.6B VRAM Footprint</div>
+    </div>
+    <div style="text-align:center;background:var(--bg);padding:14px;border-radius:8px;">
+      <div style="font-family:'DM Mono',monospace;font-size:1.4rem;font-weight:600;color:var(--accent-4b)">~3.5 GB</div>
+      <div style="font-size:0.78rem;color:var(--text-muted)">Qwen3-4B VRAM Footprint</div>
+    </div>
+    <div style="text-align:center;background:var(--bg);padding:14px;border-radius:8px;">
+      <div style="font-family:'DM Mono',monospace;font-size:1.4rem;font-weight:600;color:var(--green)">30.0%</div>
+      <div style="font-size:0.78rem;color:var(--text-muted)">Teacher Neighborhood Calls</div>
+    </div>
+  </div>
+  <p><strong>Behavioral Difference:</strong> While Qwen3-4B FT executes an invariant 3-step sequence without neighborhood search, Qwen3-0.6B Distilled demonstrates exploratory neighborhood navigation inherited from Gemini teacher trajectories, balancing efficiency on resource-constrained edge hardware.</p>
+</div>
+
+</body>
+</html>

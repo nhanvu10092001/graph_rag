@@ -1,0 +1,28 @@
+[project]
+name = "ark"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "python-dotenv",
+    "litellm==1.78.7",
+    "pandas",
+    "datasets",
+    "huggingface-hub>=1.0",
+    "transformers>=5.0",
+    "peft>=0.13",
+    "tantivy",
+    "tqdm",
+    "polars",
+    "pyarrow>=14.0.0",
+    "scienceplots>=2.2.0",
+    "torch",
+    "trl>=1.12.0",
+    "wandb>=0.29.0",
+    "bitsandbytes>=0.50.2",
+    "accelerate>=1.6.0,<1.13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ipykernel",
+]

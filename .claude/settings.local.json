@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3 scripts/batch_index_dataset.py --max-docs 3 --chunk-size 1500 --no-postgres --dry-run)"
+      "Bash(python3 scripts/batch_index_dataset.py --max-docs 3 --chunk-size 1500 --no-postgres --dry-run)",
+      "Bash(pdflatex -interaction=nonstopmode acl_paper.tex)",
+      "Bash(bibtex acl_paper)"
     ]
   }
 }

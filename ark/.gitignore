@@ -1,0 +1,15 @@
+.venv
+.env
+data
+!data/qa/
+!data/images/
+__pycache__
+.vscode
+logs
+
+# MacOS
+.DS_Store
+**/.DS_Store
+.venv
+data
+.hf_cache

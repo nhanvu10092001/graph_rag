@@ -1,0 +1,110 @@
+\begin{thebibliography}{14}
+\providecommand{\natexlab}[1]{#1}
+
+\bibitem[{Chandak et~al.(2023)Chandak, Huang, and Zitnik}]{chandak2023primekg}
+Payal Chandak, Kexin Huang, and Marinka Zitnik. 2023.
+\newblock Building a knowledge graph to enable precision medicine.
+\newblock \emph{Scientific Data}, 10(1):67.
+
+\bibitem[{Chen et~al.(2024)Chen, Lin, Sch{\"a}rli, and Zhou}]{chen2023teaching}
+Xinyun Chen, Maxwell Lin, Nathanael Sch{\"a}rli, and Denny Zhou. 2024.
+\newblock Teaching large language models to self-debug.
+\newblock In \emph{International Conference on Learning Representations (ICLR
+  2024)}.
+
+\bibitem[{Dettmers et~al.(2023)Dettmers, Pagnoni, Holtzman, and
+  Zettlemoyer}]{dettmers2023qlora}
+Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, and Luke Zettlemoyer. 2023.
+\newblock Qlora: Efficient finetuning of quantized llms.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS
+  2023)}, volume~36, pages 10088--10115.
+
+\bibitem[{Edge et~al.(2024)Edge, Trinh, Cheng, Bradley, Chao, Mody, Truitt, and
+  Larson}]{edge2024graphrag}
+Darren Edge, Ha~Trinh, Newman Cheng, Joshua Bradley, Alex Chao, Apurva Mody,
+  Steven Truitt, and Jonathan Larson. 2024.
+\newblock From local to global: A graphrag approach to query-focused
+  summarization.
+\newblock \emph{arXiv preprint arXiv:2404.16130}.
+
+\bibitem[{Hu et~al.(2022)Hu, Shen, Wallis, Allen-Zhu, Li, Wang, Wang, and
+  Chen}]{hu2022lora}
+Edward~J Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean
+  Wang, Lu~Wang, and Weizhu Chen. 2022.
+\newblock Lora: Low-rank adaptation of large language models.
+\newblock In \emph{International Conference on Learning Representations (ICLR
+  2022)}.
+
+\bibitem[{Lewis et~al.(2020)Lewis, Perez, Piktus, Petroni, Karpukhin, Goyal,
+  Kuttler, Lewis, Yih, Rockt{\"a}schel, Riedel, and Kiela}]{lewis2020rag}
+Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir
+  Karpukhin, Naman Goyal, Heinrich Kuttler, Mike Lewis, Wen-tau Yih, Tim
+  Rockt{\"a}schel, Sebastian Riedel, and Douwe Kiela. 2020.
+\newblock Retrieval-augmented generation for knowledge-intensive nlp tasks.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS
+  2020)}, volume~33, pages 9459--9474.
+
+\bibitem[{Ouyang et~al.(2022)Ouyang, Wu, Jiang, Almeida, Wainwright, Mishkin,
+  Zhang, Agarwal, Slama, Ray et~al.}]{ouyang2022instructgpt}
+Long Ouyang, Jeffrey Wu, Xu~Jiang, Diogo Almeida, Carroll Wainwright, Pamela
+  Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, et~al.
+  2022.
+\newblock Training language models to follow instructions with human feedback.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS
+  2022)}, volume~35, pages 27730--27744.
+
+\bibitem[{Pan et~al.(2024)Pan, Luo, Wang, Chen, Wang, and Wu}]{pan2024unifying}
+Shirui Pan, Linhao Luo, Yufei Wang, Chen Chen, Jiapu Wang, and Xindong Wu.
+  2024.
+\newblock Unifying large language models and knowledge graphs: A roadmap.
+\newblock \emph{IEEE Transactions on Knowledge and Data Engineering},
+  36(7):3580--3599.
+
+\bibitem[{Polonuer et~al.(2026)Polonuer, Sanyal, Ren, and
+  Chang}]{polonuer2026ark}
+Michael Polonuer, Soumya Sanyal, Xiang Ren, and Kai-Wei Chang. 2026.
+\newblock Autonomous knowledge graph exploration with adaptive breadth-depth
+  retrieval.
+\newblock In \emph{Proceedings of the 64th Annual Meeting of the Association
+  for Computational Linguistics (ACL 2026)}, pages 714--730.
+
+\bibitem[{Robertson et~al.(2009)Robertson, Zaragoza et~al.}]{robertson2009bm25}
+Stephen Robertson, Hugo Zaragoza, et~al. 2009.
+\newblock The probabilistic relevance framework: Bm25 and beyond.
+\newblock \emph{Foundations and Trends{\textregistered} in Information
+  Retrieval}, 3(4):333--389.
+
+\bibitem[{Sun et~al.(2024)Sun, Xu, Tang, Wang, Lin, Chen, Ni, and
+  He}]{sun2023thinkongraph}
+Jiashuo Sun, Chengjin Xu, Luming Tang, Saizhuo Wang, Chen Lin, Yeyun Chen, Zhao
+  Ni, and Lifang He. 2024.
+\newblock Think-on-graph: Deep and responsible reasoning of large language
+  models on knowledge graphs.
+\newblock In \emph{International Conference on Learning Representations (ICLR
+  2024)}.
+
+\bibitem[{Wu et~al.(2024)Wu, Sun, Yang, He, and Leskovec}]{wu2024stark}
+Shirley Wu, Shiyu Sun, Yuan Yang, Percy He, and Jure Leskovec. 2024.
+\newblock Stark: Benchmarking llm retrieval on text-rich knowledge graphs.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS
+  2024)}, volume~37, pages 12450--12470.
+
+\bibitem[{Yao et~al.(2023)Yao, Zhao, Yu, Du, Shafran, Narasimhan, and
+  Cao}]{yao2022react}
+Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan,
+  and Yuan Cao. 2023.
+\newblock React: Synergizing reasoning and acting in language models.
+\newblock In \emph{International Conference on Learning Representations (ICLR
+  2023)}.
+
+\bibitem[{Yasunaga et~al.(2021)Yasunaga, Ren, Bosselut, Liang, and
+  Leskovec}]{yasunaga2021qa}
+Michihiro Yasunaga, Hongyu Ren, Antoine Bosselut, Percy Liang, and Jure
+  Leskovec. 2021.
+\newblock Qa-gnn: Reasoning with language models and knowledge graphs for
+  question answering.
+\newblock In \emph{Proceedings of the 2021 Conference of the North American
+  Chapter of the Association for Computational Linguistics: Human Language
+  Technologies (NAACL 2021)}, pages 535--546.
+
+\end{thebibliography}
